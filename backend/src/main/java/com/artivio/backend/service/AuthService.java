@@ -1,5 +1,6 @@
 package com.artivio.backend.service;
 
+import com.artivio.backend.model.Role;
 import com.artivio.backend.model.User;
 import com.artivio.backend.model.request.LoginRequest;
 import com.artivio.backend.model.request.RegisterRequest;
@@ -22,6 +23,7 @@ public class AuthService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword()); // sau này mã hóa BCrypt
+        user.setRole(Role.USER);
 
         return userRepository.save(user);
     }
