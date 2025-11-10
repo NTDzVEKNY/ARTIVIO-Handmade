@@ -7,10 +7,7 @@ import com.artivio.backend.service.HandmadeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -35,5 +32,41 @@ public class HandmadeController {
     @GetMapping("/category")
     public List<Category> getCategory(){
         return handmadeService.getAllCategories();
+    }
+
+    @GetMapping("/category/{id}/products")
+    public ResponseEntity<PagedResponse<Product>> getProductsByCategory(
+            @PathVariable int id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ){
+        Page<Product> products = handmadeService.getProductsByCategory(id, page, size);
+        PagedResponse<Product> response = new PagedResponse<>(products);
+        return ResponseEntity.ok(response);
+    }
+    // Create product
+    @PostMapping("/products")
+    public ResponseEntity<Product> createProduct(@RequestBody Product product){
+        Product saved = handmadeService.createProduct(product);
+        return ResponseEntity.ok(saved);
+    }
+    // Read one product
+    @GetMapping("/products/{id}")
+    public ResponseEntity<Product> getProductById(@PathVariable Long id){
+        return ResponseEntity.ok(handmadeService.getProductById(id));
+    }
+    // Update product
+    @PutMapping("/products/{id}")
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable Long id,
+            @RequestBody Product product
+    ){
+        return ResponseEntity.ok(handmadeService.updateProduct(id, product));
+    }
+    // Delete
+    @DeleteMapping("/products/{id}")
+    public ResponseEntity<String> deleteProduct(@PathVariable Long id){
+        handmadeService.deleteProduct(id);
+        return ResponseEntity.ok("Deleted product: " + id);
     }
 }
