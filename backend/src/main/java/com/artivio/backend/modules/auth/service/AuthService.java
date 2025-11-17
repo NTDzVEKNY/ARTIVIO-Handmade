@@ -19,6 +19,9 @@ public class AuthService {
         if (userRepository.existsByEmail(req.getEmail())) {
             throw new RuntimeException("Email đã tồn tại!");
         }
+        if (!req.getPassword().equals(req.getConfirmPassword())) {
+            throw new RuntimeException("Password và Confirm Password phải giống nhau");
+        }
 
         User user = new User();
         user.setUsername(req.getUsername());
