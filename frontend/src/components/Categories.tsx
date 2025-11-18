@@ -15,11 +15,11 @@ export default function Categories() {
         <div className="h-1 w-16 bg-gradient-to-r from-orange-400 to-yellow-300 rounded-full mt-2"></div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-6">
         {categories.map((item, idx) => (
           <Link 
             key={item.name} 
-            href="#" 
+            href="/shop/products" 
             className="group relative block"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-orange-200/20 to-yellow-200/20 rounded-2xl transform group-hover:scale-105 transition-transform duration-300 -z-10"></div>

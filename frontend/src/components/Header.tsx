@@ -5,23 +5,24 @@ import Image from "next/image";
 import Link from "next/link";
 
 const CATEGORIES = [
-  "Len Sợi",
-  "Dụng Cụ Đan Móc Len",
-  "Phụ Liệu Trang Trí",
-  "Thành phẩm",
-  "Sách",
-  "Hướng Dẫn Đan Móc Thêu May",
-  "Thêu Thùa",
+  "Đồng hồ",
+  "Hoa vĩnh cửu",
+  "Quà tặng",
+  "Thiệp handmade",
+  "Phụ kiện & nguyên liệu",
+  "Vải decor",
+  "Ví & passport",
+  "Limited",
 ];
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown khi click outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -33,7 +34,7 @@ export default function Header() {
   return (
     <header className="w-full bg-white sticky top-0 z-40 border-b shadow-sm">
       <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-        <Link href="#" className="flex items-center gap-3 group">
+        <Link href="/" className="flex items-center gap-3 group">
           <div className="w-12 h-12 relative group-hover:scale-110 transition-transform duration-300">
             <Image
               src="/artivio-logo.png"
@@ -46,7 +47,7 @@ export default function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="#" className="text-sm font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-black after:transition-all after:duration-300 hover:after:w-full transition-colors pb-0.5">Trang chủ</Link>
+          <Link href="/" className="text-sm font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-black after:transition-all after:duration-300 hover:after:w-full transition-colors pb-0.5">Trang chủ</Link>
           
           {/* Dropdown Danh mục */}
           <div className="relative" ref={dropdownRef}>
@@ -71,7 +72,7 @@ export default function Header() {
               {CATEGORIES.map((cat, idx) => (
                 <Link
                   key={cat}
-                  href="#"
+                  href={`/shop/products?category=${encodeURIComponent(cat)}`}
                   onClick={() => setIsOpen(false)}
                   className={`block px-4 py-3 text-sm text-gray-700 transition-all duration-200 relative group overflow-hidden ${
                     idx === 0 ? 'rounded-t-lg' : ''
@@ -88,7 +89,7 @@ export default function Header() {
             </div>
           </div>
 
-          <Link href="#" className="text-sm font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-black after:transition-all after:duration-300 hover:after:w-full pb-0.5 transition-colors">Sản phẩm</Link>
+          <Link href="/shop/products" className="text-sm font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-black after:transition-all after:duration-300 hover:after:w-full pb-0.5 transition-colors">Sản phẩm</Link>
           <Link href="#" className="text-sm font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-black after:transition-all after:duration-300 hover:after:w-full pb-0.5 transition-colors">Làm riêng</Link>
           <Link href="#" className="text-sm font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-black after:transition-all after:duration-300 hover:after:w-full pb-0.5 transition-colors">Đơn hàng</Link>
           <Link href="#" className="text-sm font-medium relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-black after:transition-all after:duration-300 hover:after:w-full pb-0.5 transition-colors">Liên hệ</Link>

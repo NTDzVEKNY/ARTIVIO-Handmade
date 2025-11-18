@@ -20,8 +20,8 @@ export default function Hero() {
           Sản phẩm thủ công tay làm, chất liệu tinh tế, thiết kế riêng theo ý bạn. Khám phá danh mục, đặt hàng hoặc yêu cầu làm riêng.
         </p>
         <div className="flex gap-4">
-          <Link href="#" className="inline-block bg-[#0f172a] text-white px-6 py-3 rounded-full text-sm">Mua ngay</Link>
-          <Link href="#" className="inline-block border border-gray-300 px-6 py-3 rounded-full text-sm">Xem danh mục</Link>
+          <Link href="/shop/products" className="inline-block bg-[#0f172a] text-white px-6 py-3 rounded-full text-sm hover:bg-[#1e293b] transition-colors">Mua ngay</Link>
+          <Link href="/shop/products" className="inline-block border border-gray-300 px-6 py-3 rounded-full text-sm hover:border-[#0f172a] hover:text-[#0f172a] transition-colors">Xem danh mục</Link>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-4">
