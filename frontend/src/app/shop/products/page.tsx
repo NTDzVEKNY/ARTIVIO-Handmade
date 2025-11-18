@@ -8,51 +8,92 @@ import Header from "../../../components/Header";
 import Footer from "../../../components/Footer";
 
 const CATEGORIES = [
-  "Tất cả",
-  "Đồng hồ",
-  "Hoa vĩnh cửu",
-  "Quà tặng",
-  "Thiệp handmade",
-  "Phụ kiện & nguyên liệu",
-  "Vải decor",
-  "Ví & passport",
-  "Limited",
-];
+  "Tất cả"
+]; // Base category, others will be fetched
 
-// Mock product data - replace with API call later
-const MOCK_PRODUCTS = [
-  { id: 1, name: "Đồng hồ treo tường gỗ", category: "Đồng hồ", price: 450000, description: "Đồng hồ treo tường làm từ gỗ tự nhiên, thiết kế cổ điển", image: "/hero-handmade.jpg" },
-  { id: 2, name: "Hoa hồng vĩnh cửu", category: "Hoa vĩnh cửu", price: 280000, description: "Hoa hồng vĩnh cửu được bảo quản đặc biệt, giữ được vẻ đẹp lâu dài", image: "/hero-handmade.jpg" },
-  { id: 3, name: "Bộ quà tặng handmade", category: "Quà tặng", price: 350000, description: "Bộ quà tặng handmade đầy đủ, phù hợp cho mọi dịp", image: "/hero-handmade.jpg" },
-  { id: 4, name: "Thiệp chúc mừng sinh nhật", category: "Thiệp handmade", price: 50000, description: "Thiệp chúc mừng sinh nhật được làm thủ công, độc đáo", image: "/hero-handmade.jpg" },
-  { id: 5, name: "Bộ phụ kiện trang trí", category: "Phụ kiện & nguyên liệu", price: 120000, description: "Bộ phụ kiện trang trí đa dạng, chất lượng cao", image: "/hero-handmade.jpg" },
-  { id: 6, name: "Vải decor hoa văn", category: "Vải decor", price: 180000, description: "Vải decor với hoa văn độc đáo, phù hợp trang trí nội thất", image: "/hero-handmade.jpg" },
-  { id: 7, name: "Ví da passport", category: "Ví & passport", price: 320000, description: "Ví da passport thủ công, thiết kế sang trọng", image: "/hero-handmade.jpg" },
-  { id: 8, name: "Bộ sưu tập Limited Edition", category: "Limited", price: 850000, description: "Bộ sưu tập giới hạn, độc quyền và đặc biệt", image: "/hero-handmade.jpg" },
-  { id: 9, name: "Đồng hồ để bàn vintage", category: "Đồng hồ", price: 380000, description: "Đồng hồ để bàn phong cách vintage, sang trọng", image: "/hero-handmade.jpg" },
-  { id: 10, name: "Hoa cẩm chướng vĩnh cửu", category: "Hoa vĩnh cửu", price: 250000, description: "Hoa cẩm chướng vĩnh cửu nhiều màu sắc", image: "/hero-handmade.jpg" },
-  { id: 11, name: "Thiệp cảm ơn handmade", category: "Thiệp handmade", price: 40000, description: "Thiệp cảm ơn được làm thủ công tinh xảo", image: "/hero-handmade.jpg" },
-  { id: 12, name: "Ví da mini cao cấp", category: "Ví & passport", price: 290000, description: "Ví da mini cao cấp, thiết kế gọn nhẹ", image: "/hero-handmade.jpg" },
-];
+// Define types for our data
+interface Product {
+  id: number;
+  productName: string;
+  categoryId: number;
+  categoryName: string;
+  price: string; // API returns price as string
+  description: string;
+  image: string;
+}
+
+interface Category {
+  categoryId: number;
+  categoryName: string;
+}
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const categoryParam = searchParams.get('category');
-  
-  const [selectedCategory, setSelectedCategory] = useState(
-    categoryParam && CATEGORIES.includes(categoryParam) ? categoryParam : "Tất cả"
-  );
+  const categoryIdParam = searchParams.get('categoryId');
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredProducts = products.filter(product => {
+    const matchesCategory = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
+    const matchesSearch = searchQuery === '' ||
+      product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   useEffect(() => {
-    if (categoryParam && CATEGORIES.includes(categoryParam)) {
-      setSelectedCategory(categoryParam);
-    }
-  }, [categoryParam]);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [productsRes, categoriesRes] = await Promise.all([
+          fetch('/api/products?size=0'),
+          fetch('/api/categories')
+        ]);
+        const productsData: Product[] | { content: Product[] } = await productsRes.json();
+        const categoriesData: Category[] = await categoriesRes.json();
 
-  const filteredProducts = selectedCategory === "Tất cả" 
-    ? MOCK_PRODUCTS 
-    : MOCK_PRODUCTS.filter(product => product.category === selectedCategory);
+        // API có thể trả về { content: [...] } hoặc [...]
+        const productList = 'content' in productsData && Array.isArray(productsData.content) ? productsData.content : productsData;
+        setProducts(Array.isArray(productList) ? productList : []);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        setProducts([]);
+        setCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    // Chỉ chạy logic này khi danh sách categories đã được tải về từ API
+    if (categories.length === 0) return;
+
+    const currentId = categoryIdParam ? parseInt(categoryIdParam, 10) : 'all';
+
+    if (currentId !== 'all' && !Number.isNaN(currentId)) {
+      const categoryExists = categories.some(c => c.categoryId === currentId);
+      setSelectedCategoryId(categoryExists ? currentId : 'all');
+    } else {
+      setSelectedCategoryId('all');
+    }
+  }, [categoryIdParam, categories]);
+
+  if (loading) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-lg text-gray-600">Đang tải sản phẩm...</div>
+      </div>
+    );
+  }
 
   return (
     <main className="container mx-auto px-6 py-8">
@@ -62,27 +103,45 @@ function ProductsPageContent() {
         <p className="text-gray-600">Khám phá bộ sưu tập sản phẩm thủ công của chúng tôi</p>
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <input
+            type="text"
+            placeholder="Tìm kiếm sản phẩm..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-3 pl-12 pr-4 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#0f172a] focus:border-transparent"
+          />
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
       {/* Category Filter */}
       <div className="mb-8">
         <div className="flex flex-wrap gap-3">
-          {CATEGORIES.map((category) => (
+          {[{ categoryId: 'all', categoryName: 'Tất cả' }, ...categories].map((category) => (
             <button
-              key={category}
+              key={category.categoryId}
               onClick={() => {
-                setSelectedCategory(category);
-                if (category === "Tất cả") {
+                if (category.categoryId === 'all') {
                   router.push('/shop/products');
                 } else {
-                  router.push(`/shop/products?category=${encodeURIComponent(category)}`);
+                  router.push(`/shop/products?categoryId=${category.categoryId}`);
                 }
+                setSelectedCategoryId(category.categoryId as number | 'all');
               }}
               className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                selectedCategory === category
+                selectedCategoryId === category.categoryId
                   ? "bg-[#0f172a] text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              {category}
+              {category.categoryName}
             </button>
           ))}
         </div>
@@ -91,7 +150,14 @@ function ProductsPageContent() {
       {/* Results Count */}
       <div className="mb-6 text-sm text-gray-600">
         Tìm thấy <span className="font-semibold">{filteredProducts.length}</span> sản phẩm
-        {selectedCategory !== "Tất cả" && ` trong danh mục "${selectedCategory}"`}
+        {selectedCategoryId !== 'all' &&
+          ` trong danh mục "${categories.find(c => c.categoryId === selectedCategoryId)?.categoryName || ''}"`
+        }
+        {searchQuery && (
+          selectedCategoryId !== 'all'
+            ? ` phù hợp với "${searchQuery}"`
+            : ` phù hợp với "${searchQuery}"`
+        )}
       </div>
 
       {/* Products Grid */}
@@ -106,22 +172,22 @@ function ProductsPageContent() {
               <div className="relative w-full h-48 bg-gray-100">
                 <Image
                   src={product.image}
-                  alt={product.name}
+                  alt={product.productName}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
               <div className="p-4">
-                <div className="text-xs text-gray-500 mb-1">{product.category}</div>
+                <div className="text-xs text-gray-500 mb-1">{product.categoryName}</div>
                 <h3 className="text-sm font-medium mb-1 line-clamp-2 group-hover:text-[#0f172a] transition-colors">
-                  {product.name}
+                  {product.productName}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1 line-clamp-2 mb-3">
                   {product.description}
                 </p>
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-[#0f172a]">
-                    ₫{product.price.toLocaleString("vi-VN")}
+                    ₫{Number(product.price).toLocaleString("vi-VN")}
                   </div>
                   <div className="text-xs bg-[#0f172a] text-white px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     Chi tiết →
@@ -135,7 +201,12 @@ function ProductsPageContent() {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🔍</div>
           <h3 className="text-xl font-semibold text-gray-800 mb-2">Không tìm thấy sản phẩm</h3>
-          <p className="text-gray-600">Hãy thử chọn danh mục khác</p>
+          <p className="text-gray-600">
+            {searchQuery
+              ? `Không có sản phẩm nào phù hợp với "${searchQuery}". Hãy thử từ khóa khác.`
+              : "Hãy thử chọn danh mục khác hoặc tìm kiếm sản phẩm."
+            }
+          </p>
         </div>
       )}
     </main>
@@ -159,4 +230,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
