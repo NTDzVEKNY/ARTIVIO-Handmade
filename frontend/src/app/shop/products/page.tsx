@@ -4,8 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from "next/image";
 import Link from "next/link";
-import Header from "../../../components/Header";
-import Footer from "../../../components/Footer";
+import { Header, Footer } from "../../../components/common";
 
 const CATEGORIES = [
   "Tất cả"

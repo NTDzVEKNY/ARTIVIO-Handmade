@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import Header from '../../../../components/Header';
-import Footer from '../../../../components/Footer';
-import type { Product } from '../../../../lib/types';
+import { Header, Footer } from '../../../../components/common';
+import type { Product } from '../../../../types';
 
 export default function ProductDetailPage() {
   const params = useParams();
