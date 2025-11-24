@@ -4,23 +4,23 @@ import { useState, useEffect, useRef } from 'react';
 import Image from "next/image";
 import Link from "next/link";
 
-const CATEGORIES = [
-  "Đồng hồ",
-  "Hoa vĩnh cửu",
-  "Quà tặng",
-  "Thiệp handmade",
-  "Phụ kiện & nguyên liệu",
-  "Vải decor",
-  "Ví & passport",
-  "Limited",
-];
+interface Category {
+  categoryId: number;
+  categoryName: string;
+}
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown khi click outside
   useEffect(() => {
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => setCategories(Array.isArray(data) ? data : []))
+      .catch(err => console.error("Failed to fetch categories for header:", err));
+
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
@@ -69,19 +69,19 @@ export default function Header() {
             <div className={`absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg transition-all duration-300 origin-top ${
               isOpen ? 'opacity-100 scale-y-100 visible' : 'opacity-0 scale-y-95 invisible'
             }`}>
-              {CATEGORIES.map((cat, idx) => (
+              {categories.map((cat, idx) => (
                 <Link
-                  key={cat}
-                  href={`/shop/products?category=${encodeURIComponent(cat)}`}
+                  key={cat.categoryId}
+                  href={`/shop/products?categoryId=${cat.categoryId}`}
                   onClick={() => setIsOpen(false)}
                   className={`block px-4 py-3 text-sm text-gray-700 transition-all duration-200 relative group overflow-hidden ${
                     idx === 0 ? 'rounded-t-lg' : ''
                   } ${
-                    idx === CATEGORIES.length - 1 ? 'rounded-b-lg' : ''
+                    idx === categories.length - 1 ? 'rounded-b-lg' : ''
                   }`}
                 >
                   <span className="relative z-10 group-hover:text-black transition-colors">
-                    {cat}
+                    {cat.categoryName}
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-100 to-orange-100 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 -z-0"></div>
                 </Link>
