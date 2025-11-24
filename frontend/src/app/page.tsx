@@ -1,10 +1,9 @@
-import Header from "../components/Header";
-import Hero from "../components/Hero";
-import Categories from "../components/Categories";
-import FeaturedProducts from "../components/FeaturedProducts";
-import HowItWorks from "../components/HowItWorks";
-import Testimonials from "../components/Testimonials";
-import Footer from "../components/Footer";
+import { Header, Footer } from "../components/common";
+import Hero from "../components/common/Hero";
+import Categories from "../components/product/Categories";
+import FeaturedProducts from "../components/product/FeaturedProducts";
+import HowItWorks from "../components/common/HowItWorks";
+import Testimonials from "../components/common/Testimonials";
 
 export default function Home() {
   return (
