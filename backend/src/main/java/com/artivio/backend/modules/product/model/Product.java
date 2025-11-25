@@ -24,11 +24,11 @@ public class Product {
     @JoinColumn(name = "category_id")
     private Category category;
 
-    @Column(name = "product_name")
+    @Column(name = "name")
     private String productName;
 
     @Column(name = "price")
-    private String price;
+    private Double price;
 
     @Column(name = "quantity_sold")
     private Integer quantitySold;
