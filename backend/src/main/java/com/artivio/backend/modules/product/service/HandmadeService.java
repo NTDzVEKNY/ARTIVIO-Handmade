@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import com.artivio.backend.modules.product.model.enums.EnumStatus;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -46,12 +47,6 @@ public class HandmadeService {
 
         return productMapper.toDTO(saved);
     }
-    // Get one
-    public ProductDTO getById(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
-        return productMapper.toDTO(product);
-    }
 
     // Update
     public ProductDTO update(Long id, ProductRequestDTO req) {
@@ -65,12 +60,21 @@ public class HandmadeService {
         product.setPrice(req.getPrice());
         product.setStockQuantity(req.getStockQuantity());
         product.setImage(req.getImage());
-        product.setStatus(req.getStatus());
         product.setDescription(req.getDescription());
         product.setCategory(category);
-
+        if (req.getStatus() != null) {
+            product.setStatus(req.getStatus());
+        }
         Product updated = productRepository.save(product);
         return productMapper.toDTO(updated);
+    }
+
+    // Soft delete (Ẩn đi thay vì xóa thật)
+    public void softDelete(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+        product.setStatus(EnumStatus.HIDDEN);
+        productRepository.save(product);
     }
 
     // Delete

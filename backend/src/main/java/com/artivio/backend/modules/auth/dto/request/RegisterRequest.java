@@ -1,4 +1,4 @@
-package com.artivio.backend.modules.auth.dto;
+package com.artivio.backend.modules.auth.dto.request;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
