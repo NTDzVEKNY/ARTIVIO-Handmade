@@ -14,7 +14,6 @@ const PRICE_RANGES = [
   { id: 'over-500k', label: 'Trên 500.000đ', min: 500000, max: Infinity },
 ];
 
-// thay getCategoryIcon bằng mapping đơn giản (trùng với Categories.tsx)
 const categoryIcons: Record<string, string> = {
   "Đồng hồ": "🕰️",
   "Hoa vĩnh cửu": "🌹",
@@ -168,7 +167,7 @@ function ProductsPageContent() {
   if (loading) {
     return (
       <div className="text-center py-16">
-        <div className="text-lg bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent font-semibold animate-pulse">
+        <div className="text-lg font-medium animate-pulse" style={{ color: '#D96C39' }}>
           ✨ Đang tải sản phẩm...
         </div>
       </div>
@@ -176,14 +175,14 @@ function ProductsPageContent() {
   }
 
   return (
-    <main className="container mx-auto px-6 py-12 bg-gradient-to-b from-white via-yellow-50 to-white">
+    <main className="container mx-auto px-6 py-12" style={{ background: 'linear-gradient(to bottom, #F7F1E8, #F7F1E8)' }}>
       {/* Page Header */}
       <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 via-yellow-500 to-orange-500 bg-clip-text text-transparent mb-3 animate-fade-in">
+        <h1 className="text-4xl font-bold mb-3" style={{ color: '#3F2E23' }}>
           🛍️ Cửa hàng ARTIVIO
         </h1>
-        <div className="h-1 w-24 mx-auto bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full mb-4"></div>
-        <p className="text-gray-600 text-lg">Khám phá bộ sưu tập sản phẩm thủ công độc đáo của chúng tôi</p>
+        <div className="h-1 w-24 mx-auto rounded-full mb-4" style={{ backgroundColor: '#D96C39' }}></div>
+        <p className="text-lg" style={{ color: '#6B4F3E' }}>Khám phá bộ sưu tập sản phẩm thủ công độc đáo của chúng tôi</p>
       </div>
 
       {/* Search Bar */}
@@ -197,10 +196,21 @@ function ProductsPageContent() {
               setSearchQuery(e.target.value);
               setPage(0);
             }}
-            className="w-full px-6 py-4 pl-12 pr-4 text-sm border-2 border-yellow-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent shadow-md hover:shadow-lg transition-all duration-300 bg-white"
+            className="w-full px-6 py-4 pl-12 pr-4 text-sm border rounded-full focus:outline-none focus:ring-2 focus:border-transparent shadow-sm hover:shadow-md transition-all duration-300"
+            style={{
+              backgroundColor: '#F7F1E8',
+              borderColor: '#D96C39',
+              color: '#3F2E23'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = '#FFF8F0';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.backgroundColor = '#F7F1E8';
+            }}
           />
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#D96C39' }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -222,18 +232,19 @@ function ProductsPageContent() {
                 setSelectedCategoryId(category.categoryId as number | 'all');
                 setPage(0);
               }}
-              className={`px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-md ${
-                selectedCategoryId === category.categoryId
-                  ? "bg-gradient-to-r from-orange-600 to-yellow-500 text-white shadow-lg scale-105"
-                  : "bg-white text-gray-700 border-2 border-yellow-200 hover:border-orange-400"
-              }`}
+              className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-sm border`}
+              style={{
+                backgroundColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#F7F1E8',
+                color: selectedCategoryId === category.categoryId ? 'white' : '#3F2E23',
+                borderColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#D96C39'
+              }}
             >
-                <span className="flex items-center gap-3">
-                  <span className="text-lg">{categoryIcons[String(category.categoryName)] ?? '🎁'}</span>
-                  <span>{category.categoryName}</span>
-                </span>
-                </button>
-              ))}
+              <span className="flex items-center gap-3">
+                <span className="text-lg">{categoryIcons[String(category.categoryName)] ?? '🎁'}</span>
+                <span>{category.categoryName}</span>
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -241,16 +252,16 @@ function ProductsPageContent() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {/* Price Range Filter */}
         <div className="md:col-span-1">
-          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-6 border-2 border-yellow-200 shadow-lg hover:shadow-xl transition-all duration-300">
-            <h3 className="font-bold text-gray-900 mb-5 flex items-center gap-3 text-lg">
-              <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300" style={{ backgroundColor: '#F7F1E8', borderColor: '#D96C39', border: '1px solid #D96C39' }}>
+            <h3 className="font-semibold mb-5 flex items-center gap-3 text-base" style={{ color: '#3F2E23' }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#D96C39' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="bg-gradient-to-r from-orange-600 to-yellow-500 bg-clip-text text-transparent">Mức Giá</span>
+              <span>Mức Giá</span>
             </h3>
             <div className="space-y-3">
               {PRICE_RANGES.map((range) => (
-                <label key={range.id} className="flex items-center gap-3 cursor-pointer hover:bg-white p-3 rounded-lg transition-all duration-200 transform hover:scale-105">
+                <label key={range.id} className="flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-all duration-200" style={{ color: '#3F2E23' }}>
                   <input
                     type="radio"
                     name="priceRange"
@@ -261,9 +272,9 @@ function ProductsPageContent() {
                       setPage(0);
                       updateUrlParams({ priceRange: e.target.value, page: '1' });
                     }}
-                    className="w-4 h-4 accent-orange-500"
+                    className="w-4 h-4"
                   />
-                  <span className={`text-sm font-medium ${priceRange === range.id ? 'text-orange-600 font-bold' : 'text-gray-700'}`}>
+                  <span className={`text-sm ${priceRange === range.id ? 'font-semibold' : ''}`} style={{ color: priceRange === range.id ? '#D96C39' : '#3F2E23' }}>
                     {range.label}
                   </span>
                 </label>
@@ -275,12 +286,12 @@ function ProductsPageContent() {
         {/* Products Grid + Sort */}
         <div className="md:col-span-3">
           {/* Sort Bar */}
-          <div className="flex items-center justify-between mb-8 p-5 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-xl border-2 border-yellow-300 shadow-md">
-            <div className="text-sm font-semibold text-gray-800">
-              Tìm thấy <span className="text-orange-600 text-lg">{filteredProducts.length}</span> sản phẩm
+          <div className="flex items-center justify-between mb-8 p-5 rounded-xl shadow-sm" style={{ backgroundColor: '#F7F1E8', borderColor: '#D96C39', border: '1px solid #D96C39' }}>
+            <div className="text-sm font-medium" style={{ color: '#3F2E23' }}>
+              Tìm thấy <span style={{ color: '#D96C39', fontWeight: 'bold' }}>{filteredProducts.length}</span> sản phẩm
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-gray-700">Sắp xếp:</span>
+              <span className="text-sm font-medium" style={{ color: '#3F2E23' }}>Sắp xếp:</span>
               <select
                 value={sortBy}
                 onChange={(e) => {
@@ -288,7 +299,13 @@ function ProductsPageContent() {
                   setPage(0);
                   updateUrlParams({ sort: e.target.value, page: '1' });
                 }}
-                className="px-4 py-2 text-sm font-medium border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-gray-700 hover:border-orange-500 transition-all duration-300 cursor-pointer"
+                className="px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 cursor-pointer"
+                style={{
+                  borderColor: '#D96C39',
+                  border: '1px solid #D96C39',
+                  backgroundColor: '#FFF8F0',
+                  color: '#3F2E23'
+                }}
               >
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.id} value={option.id}>
@@ -302,20 +319,21 @@ function ProductsPageContent() {
           {/* Products Grid */}
           {pageItems.length > 0 ? (
             <div>
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
                 {pageItems.map((product, idx) => (
                   <Link
                     key={product.id}
                     href={`/shop/id/${product.id}`}
                     className="group relative"
                   >
-                    <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-2 border-yellow-100 hover:border-orange-400 h-full flex flex-col"
-                      style={{
-                        animation: `fadeInUp 0.5s ease-out ${idx * 0.05}s backwards`
-                      }}
-                    >
+                    <div className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col" style={{
+                      backgroundColor: '#F7F1E8',
+                      borderColor: '#D96C39',
+                      border: '1px solid #E8D5B5',
+                      animation: `fadeInUp 0.5s ease-out ${idx * 0.05}s backwards`
+                    }}>
                       {/* Image Container */}
-                      <div className="relative w-full h-48 bg-gradient-to-br from-yellow-100 to-orange-100 overflow-hidden">
+                      <div className="relative w-full h-48 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
                         <Image
                           src={product.image}
                           alt={product.productName}
@@ -323,7 +341,7 @@ function ProductsPageContent() {
                           className="object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                         {product.quantitySold && product.quantitySold > 0 && (
-                          <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                          <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
                             ⭐ Bán chạy
                           </div>
                         )}
@@ -331,20 +349,20 @@ function ProductsPageContent() {
 
                       {/* Content */}
                       <div className="p-5 flex-1 flex flex-col">
-                        <div className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2">
+                        <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#D96C39' }}>
                           {product.categoryName}
                         </div>
-                        <h3 className="text-sm font-bold mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors text-gray-900">
+                        <h3 className="text-sm font-semibold mb-2 line-clamp-2 transition-colors" style={{ color: '#3F2E23' }}>
                           {product.productName}
                         </h3>
-                        <p className="text-xs text-gray-600 mt-1 line-clamp-2 mb-4 flex-grow">
+                        <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
                           {product.description}
                         </p>
-                        <div className="flex items-center justify-between pt-4 border-t-2 border-yellow-100">
-                          <div className="text-lg font-bold bg-gradient-to-r from-orange-600 to-yellow-500 bg-clip-text text-transparent">
+                        <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #E8D5B5' }}>
+                          <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
                             ₫{Number(product.price).toLocaleString("vi-VN")}
                           </div>
-                          <div className="text-xs bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-3 py-2 rounded-full font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110">
+                          <div className="text-xs text-white px-3 py-2 rounded-full font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110" style={{ backgroundColor: '#D96C39' }}>
                             Xem →
                           </div>
                         </div>
@@ -355,7 +373,7 @@ function ProductsPageContent() {
               </div>
 
               {/* Pagination */}
-              <div className="mt-12 flex items-center justify-center gap-2 pb-8">
+              <div className="mt-12 flex items-center justify-center gap-2 pb-8 w-full">
                 <button
                   onClick={() => {
                     const nextPage = Math.max(0, safePage - 1);
@@ -363,7 +381,15 @@ function ProductsPageContent() {
                     router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`);
                   }}
                   disabled={safePage === 0}
-                  className="px-4 py-3 rounded-lg bg-gradient-to-r from-yellow-300 to-orange-300 hover:from-yellow-400 hover:to-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-gray-800 font-bold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
+                  className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-sm"
+                  style={{
+                    backgroundColor: safePage === 0 ? '#E8D5B5' : '#F7F1E8',
+                    color: '#3F2E23',
+                    borderColor: '#D96C39',
+                    border: '1px solid #D96C39',
+                    opacity: safePage === 0 ? 0.5 : 1,
+                    cursor: safePage === 0 ? 'not-allowed' : 'pointer'
+                  }}
                 >
                   ← Prev
                 </button>
@@ -374,7 +400,7 @@ function ProductsPageContent() {
                     const leftGap = i === 1 && safePage > 3;
                     const rightGap = i === totalPages - 2 && safePage < totalPages - 4;
                     if (leftGap || rightGap) {
-                      return <span key={`gap-${i}`} className="px-2 text-gray-400 font-bold">…</span>;
+                      return <span key={`gap-${i}`} className="px-2 font-medium" style={{ color: '#D96C39' }}>…</span>;
                     }
                     return null;
                   }
@@ -385,11 +411,13 @@ function ProductsPageContent() {
                         setPage(i);
                         router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${i + 1}`);
                       }}
-                      className={`px-4 py-3 rounded-lg font-bold transition-all duration-300 transform hover:scale-110 shadow-md ${
-                        i === safePage
-                          ? 'bg-gradient-to-r from-orange-600 to-yellow-500 text-white shadow-lg scale-110'
-                          : 'bg-white text-gray-700 border-2 border-yellow-300 hover:border-orange-400 hover:bg-yellow-50'
-                      }`}
+                      className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-110 shadow-sm"
+                      style={{
+                        backgroundColor: i === safePage ? '#D96C39' : '#F7F1E8',
+                        color: i === safePage ? 'white' : '#3F2E23',
+                        borderColor: '#D96C39',
+                        border: '1px solid #D96C39'
+                      }}
                     >
                       {i + 1}
                     </button>
@@ -403,7 +431,15 @@ function ProductsPageContent() {
                     router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`);
                   }}
                   disabled={safePage >= totalPages - 1}
-                  className="px-4 py-3 rounded-lg bg-gradient-to-r from-yellow-300 to-orange-300 hover:from-yellow-400 hover:to-orange-400 disabled:opacity-40 disabled:cursor-not-allowed text-gray-800 font-bold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
+                  className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-sm"
+                  style={{
+                    backgroundColor: safePage >= totalPages - 1 ? '#E8D5B5' : '#F7F1E8',
+                    color: '#3F2E23',
+                    borderColor: '#D96C39',
+                    border: '1px solid #D96C39',
+                    opacity: safePage >= totalPages - 1 ? 0.5 : 1,
+                    cursor: safePage >= totalPages - 1 ? 'not-allowed' : 'pointer'
+                  }}
                 >
                   Next →
                 </button>
@@ -412,8 +448,8 @@ function ProductsPageContent() {
           ) : (
             <div className="text-center py-20">
               <div className="text-8xl mb-6 animate-bounce">🔍</div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">Không tìm thấy sản phẩm</h3>
-              <p className="text-gray-600 text-lg">
+              <h3 className="text-2xl font-semibold mb-3" style={{ color: '#3F2E23' }}>Không tìm thấy sản phẩm</h3>
+              <p className="text-base" style={{ color: '#6B4F3E' }}>
                 {searchQuery
                   ? `Không có sản phẩm nào phù hợp với "${searchQuery}". Hãy thử từ khóa khác.`
                   : "Hãy thử chọn danh mục hoặc mức giá khác."}
@@ -434,15 +470,6 @@ function ProductsPageContent() {
             transform: translateY(0);
           }
         }
-
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
       `}</style>
     </main>
   );
@@ -450,12 +477,12 @@ function ProductsPageContent() {
 
 export default function ProductsPage() {
   return (
-    <div className="min-h-screen font-sans text-gray-800 bg-white">
+    <div className="min-h-screen font-sans" style={{ backgroundColor: '#F7F1E8', color: '#3F2E23' }}>
       <Header />
       <Suspense fallback={
         <main className="container mx-auto px-6 py-8">
           <div className="text-center py-16">
-            <div className="text-lg bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent font-bold animate-pulse">
+            <div className="text-lg font-medium animate-pulse" style={{ color: '#D96C39' }}>
               ✨ Đang tải...
             </div>
           </div>
