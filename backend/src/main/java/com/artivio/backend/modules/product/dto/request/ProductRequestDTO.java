@@ -13,7 +13,7 @@ public class ProductRequestDTO {
     private String productName;
 
     @NotBlank(message = "Giá sản phẩm không được để trống")
-    private String price;
+    private Double price;
 
     @NotNull(message = "Số lượng tồn kho không được để trống")
     @Min(value = 0, message = "Số lượng tồn kho phải >= 0")
