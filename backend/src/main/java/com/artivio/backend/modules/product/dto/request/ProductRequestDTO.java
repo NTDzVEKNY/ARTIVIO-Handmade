@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.artivio.backend.modules.product.model.enums.EnumStatus;
 
 @Data
 @AllArgsConstructor
@@ -13,18 +14,21 @@ public class ProductRequestDTO {
     private String productName;
 
     @NotBlank(message = "Giá sản phẩm không được để trống")
+    @Min(value = 0, message = "Giá sản phẩm phải >= 0")
     private Double price;
 
     @NotNull(message = "Số lượng tồn kho không được để trống")
     @Min(value = 0, message = "Số lượng tồn kho phải >= 0")
     private Integer stockQuantity;
-    @Min(value = 0)
-    private Integer quantitySold;   // có thể null (lúc tạo mới = 0)
+
+    @Min(value = 0, message = "Số lượng bán phải >= 0")
+    private Integer quantitySold;
 
     private String image;
 
     @NotBlank(message = "Trạng thái không được để trống")
-    private String status;
+    @Pattern(regexp = "^(ACTIVE|HIDDEN)$", message = "Trạng thái chỉ được phép là ACTIVE hoặc HIDDEN")
+    private EnumStatus status;
 
     private String description;
 

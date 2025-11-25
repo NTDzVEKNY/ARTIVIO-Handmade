@@ -1,4 +1,4 @@
-package com.artivio.backend.modules.auth.dto;
+package com.artivio.backend.modules.auth.dto.response;
 
 import com.artivio.backend.modules.auth.model.Role;
 import lombok.AllArgsConstructor;

@@ -54,12 +54,6 @@ public class HandmadeController {
         return ResponseEntity.ok(handmadeService.create(dto));
     }
 
-    // GET ONE
-    @GetMapping("/products/{id}")
-    public ResponseEntity<ProductDTO> getProduct(@PathVariable Long id) {
-        return ResponseEntity.ok(handmadeService.getById(id));
-    }
-
     // UPDATE
     @PutMapping("/products/{id}")
     public ResponseEntity<ProductDTO> updateProduct(

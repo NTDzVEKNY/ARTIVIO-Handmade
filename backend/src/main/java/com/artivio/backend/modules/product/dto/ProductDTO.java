@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.artivio.backend.modules.product.model.enums.EnumStatus;
 
 @Data
 @Builder
@@ -16,7 +17,7 @@ public class ProductDTO {
     private Integer quantitySold;
     private Integer stockQuantity;
     private String image;
-    private String status;
+    private EnumStatus status;
     private String description;
     private Long categoryId;
     private String categoryName;

@@ -1,11 +1,11 @@
 package com.artivio.backend.modules.auth.service;
 
 import lombok.RequiredArgsConstructor;
-import com.artivio.backend.modules.auth.dto.RegisterResponse;
+import com.artivio.backend.modules.auth.dto.response.RegisterResponse;
 import com.artivio.backend.modules.auth.model.Role;
 import com.artivio.backend.modules.auth.model.User;
 import com.artivio.backend.modules.auth.repository.UserRepository;
-import com.artivio.backend.modules.auth.dto.RegisterRequest;
+import com.artivio.backend.modules.auth.dto.request.RegisterRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
