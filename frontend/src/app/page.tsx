@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <div className="min-h-screen font-sans text-gray-800 bg-white">
       <Header />
-      <main className="container mx-auto px-6 py-12">
+      <main className="container mx-auto px-6 py-12 bg-gradient-to-b from-white via-yellow-50 to-white rounded-lg">
         <Hero />
         <Categories />
         <FeaturedProducts />
