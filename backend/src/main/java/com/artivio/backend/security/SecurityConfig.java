@@ -66,7 +66,7 @@ public class SecurityConfig {
     // Bean này cung cấp cách hash mật khẩu (BCrypt)
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(12);
     }
 
     // Bean này kết hợp UserDetailsService và PasswordEncoder
