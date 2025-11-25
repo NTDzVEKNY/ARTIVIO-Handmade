@@ -1,7 +1,7 @@
 package com.artivio.backend.modules.auth.service;
 
 import lombok.RequiredArgsConstructor;
-import com.artivio.backend.modules.auth.dto.UserResponse;
+import com.artivio.backend.modules.auth.dto.RegisterResponse;
 import com.artivio.backend.modules.auth.model.Role;
 import com.artivio.backend.modules.auth.model.User;
 import com.artivio.backend.modules.auth.repository.UserRepository;
@@ -17,7 +17,7 @@ public class RegisterService {
     private UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserResponse register(RegisterRequest req) {
+    public RegisterResponse register(RegisterRequest req) {
 
         // Check email duplicate
         if (userRepository.existsByEmail(req.getEmail())) {
@@ -35,7 +35,7 @@ public class RegisterService {
 
         User saved = userRepository.save(user);
 
-        return new UserResponse(
+        return new RegisterResponse(
                 saved.getId(),
                 saved.getUsername(),
                 saved.getEmail(),

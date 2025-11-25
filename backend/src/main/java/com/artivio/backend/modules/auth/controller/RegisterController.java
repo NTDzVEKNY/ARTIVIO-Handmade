@@ -1,6 +1,6 @@
 package com.artivio.backend.modules.auth.controller;
 
-import com.artivio.backend.modules.auth.dto.UserResponse;
+import com.artivio.backend.modules.auth.dto.RegisterResponse;
 import com.artivio.backend.modules.auth.model.User;
 import com.artivio.backend.modules.auth.dto.RegisterRequest;
 import com.artivio.backend.modules.auth.service.RegisterService;
@@ -19,7 +19,7 @@ public class RegisterController {
     private RegisterService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(
+    public ResponseEntity<RegisterResponse> register(
             @Valid @RequestBody RegisterRequest request
     ) {
         return ResponseEntity.ok(authService.register(request));
