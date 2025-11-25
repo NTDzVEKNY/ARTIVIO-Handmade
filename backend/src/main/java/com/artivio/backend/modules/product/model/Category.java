@@ -19,6 +19,6 @@ public class Category {
     @Column(name = "name")
     private String categoryName;
     // Mối quan hệ 1-nhiều
-    @OneToMany(mappedBy = "categories", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     private List<Product> products;
 }
