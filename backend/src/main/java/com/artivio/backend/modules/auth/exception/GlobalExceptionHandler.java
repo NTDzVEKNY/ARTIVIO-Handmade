@@ -26,4 +26,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleRuntime(RuntimeException ex) {
         return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
     }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Object> handleBadCredentials(BadCredentialsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                Map.of("error", "Email hoặc mật khẩu không chính xác")
+        );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Object> handleAuthException(AuthenticationException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                Map.of("error", e.getMessage())
+        );
+    }
 }

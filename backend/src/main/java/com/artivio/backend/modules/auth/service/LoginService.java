@@ -21,16 +21,12 @@ public class LoginService {
     private final AuthenticationManager authenticationManager;
 
     public LoginResponseDTO login(LoginRequestDTO request) {
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getEmail(),
-                            request.getPassword()
-                    )
-            );
-        } catch (AuthenticationException e) {
-            throw new BadCredentialsException(e.getMessage());
-        }
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
 
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalStateException("Lỗi không tìm thấy user sau khi đã xác thực"));
