@@ -1,72 +1,47 @@
 package com.artivio.backend.modules.auth.model;
 
+
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "users")
-@EntityListeners(AuditingEntityListener.class) // Tự động cập nhật created_at/updated_at
-public class User implements UserDetails {
-
+@Data
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(length = 100)
-    private String name;
-
-    @Column(length = 100, unique = true, nullable = false)
-    private String email; // Dùng làm tên đăng nhập
-
-    @Column(length = 255, nullable = false)
+    @Column(name = "id")
+    private int id;
+    @Column(name = "name")
+    private String username;
+    @Column(name = "email")
+    private String email;
+    @Column(name = "password")
     private String password;
 
+    @Column(name = "role")
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Role role;
 
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", updatable = false)
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
-    @LastModifiedDate
     @Column(name = "updated_at")
+    @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    // Các phương thức của UserDetails
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
     }
 
-    @Override
-    public String getPassword() {
-        return password;
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
-
-    // Quan trọng: Spring Security sẽ gọi hàm này để lấy "tên đăng nhập"
-    // Chúng ta trả về 'email'
-    @Override
-    public String getUsername() {
-        return email;
-    }
-
-
 }
