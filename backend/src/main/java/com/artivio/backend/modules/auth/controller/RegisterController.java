@@ -3,7 +3,7 @@ package com.artivio.backend.modules.auth.controller;
 import com.artivio.backend.modules.auth.dto.UserResponse;
 import com.artivio.backend.modules.auth.model.User;
 import com.artivio.backend.modules.auth.dto.RegisterRequest;
-import com.artivio.backend.modules.auth.service.AuthService;
+import com.artivio.backend.modules.auth.service.RegisterService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
-public class AuthController {
+public class RegisterController {
     @Autowired
-    private AuthService authService;
+    private RegisterService authService;
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(
