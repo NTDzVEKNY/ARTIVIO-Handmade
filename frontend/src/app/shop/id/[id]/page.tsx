@@ -34,6 +34,9 @@ export default function ProductDetailPage() {
       })
       .then((data) => {
         setProduct(data);
+        // thiết lập quantity mặc định = 1 hoặc 1 nếu stock thấp hơn
+        const defaultQty = 1;
+        setQuantity(defaultQty);
       })
       .catch((err: unknown) => {
         setError('Không tải được sản phẩm');
@@ -42,8 +45,26 @@ export default function ProductDetailPage() {
       .finally(() => setLoading(false));
   }, [productId]);
 
-  const increase = () => setQuantity((q) => Math.min((product?.stockQuantity ?? 9999), q + 1));
-  const decrease = () => setQuantity((q) => Math.max(1, q - 1));
+  const increase = () =>
+    setQuantity((q) => {
+      const max = product?.stockQuantity ?? 9999;
+      return Math.min(max, q + 1);
+    });
+  const decrease = () =>
+    setQuantity((q) => Math.max(1, q - 1));
+
+  // xử lý nhập trực tiếp
+  const onQuantityChange = (value: string) => {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) {
+      setQuantity(1);
+      return;
+    }
+    const min = 1;
+    const max = product?.stockQuantity ?? 9999;
+    const clamped = Math.max(min, Math.min(max, Math.floor(parsed)));
+    setQuantity(clamped);
+  };
 
   return (
     <div className="min-h-screen font-sans text-gray-800 bg-white">
@@ -109,26 +130,52 @@ export default function ProductDetailPage() {
 
               <div className="flex items-center gap-4 mt-4">
                 <div className="flex items-center border rounded-full overflow-hidden">
-                  <button onClick={decrease} className="px-4 py-2 bg-gray-100">-</button>
-                  <div className="px-6 py-2">{quantity}</div>
-                  <button onClick={increase} className="px-4 py-2 bg-gray-100">+</button>
+                  <button
+                    onClick={decrease}
+                    aria-label="Giảm số lượng"
+                    className="px-4 py-2 bg-gray-100 disabled:opacity-50"
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={product.stockQuantity ?? 9999}
+                    value={quantity}
+                    onChange={(e) => onQuantityChange(e.target.value)}
+                    className="w-20 text-center px-3 py-2 outline-none appearance-none bg-white"
+                    aria-label="Số lượng"
+                  />
+
+                  <button
+                    onClick={increase}
+                    aria-label="Tăng số lượng"
+                    className="px-4 py-2 bg-gray-100 disabled:opacity-50"
+                    disabled={quantity >= (product.stockQuantity ?? 9999)}
+                  >
+                    +
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <button
                     className="border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300"
-                    onClick={() => alert('Thêm vào giỏ (mock)')}
+                    onClick={() => alert(`Thêm ${quantity} vào giỏ (mock)`)}
                   >
                     Thêm vào giỏ
                   </button>
                   <button
                     className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => alert('Mua ngay (mock)')}
+                    onClick={() => alert(`Mua ${quantity} (mock)`)}
                   >
                     Mua ngay
                   </button>
                 </div>
               </div>
+
               <div className="pt-2">
                 <button
                   onClick={() => alert('Đặt làm riêng (mock)')}
