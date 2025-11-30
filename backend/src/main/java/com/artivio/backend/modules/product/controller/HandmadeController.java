@@ -2,10 +2,10 @@ package com.artivio.backend.modules.product.controller;
 
 import com.artivio.backend.modules.product.dto.CategoryDTO;
 import com.artivio.backend.modules.product.dto.ProductDTO;
-import com.artivio.backend.modules.product.dto.ProductRequestDTO;
+import com.artivio.backend.modules.product.dto.request.ProductRequestDTO;
+import com.artivio.backend.modules.product.dto.response.PagedResponse;
 import com.artivio.backend.modules.product.model.Category;
 import com.artivio.backend.modules.product.model.Product;
-import com.artivio.backend.modules.product.response.PagedResponse;
 import com.artivio.backend.modules.product.service.HandmadeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

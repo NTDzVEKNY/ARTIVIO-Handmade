@@ -1,7 +1,7 @@
 package com.artivio.backend.modules.product.mapper;
 
 import com.artivio.backend.modules.product.dto.ProductDTO;
-import com.artivio.backend.modules.product.dto.ProductRequestDTO;
+import com.artivio.backend.modules.product.dto.request.ProductRequestDTO;
 import com.artivio.backend.modules.product.model.Category;
 import com.artivio.backend.modules.product.model.Product;
 import org.springframework.stereotype.Component;

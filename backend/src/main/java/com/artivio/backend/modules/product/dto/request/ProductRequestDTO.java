@@ -1,4 +1,4 @@
-package com.artivio.backend.modules.product.dto;
+package com.artivio.backend.modules.product.dto.request;
 
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;

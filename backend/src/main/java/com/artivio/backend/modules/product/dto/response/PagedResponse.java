@@ -1,4 +1,4 @@
-package com.artivio.backend.modules.product.response;
+package com.artivio.backend.modules.product.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

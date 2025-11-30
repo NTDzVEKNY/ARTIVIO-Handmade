@@ -3,7 +3,7 @@ package com.artivio.backend.modules.product.service;
 
 import com.artivio.backend.modules.product.dto.CategoryDTO;
 import com.artivio.backend.modules.product.dto.ProductDTO;
-import com.artivio.backend.modules.product.dto.ProductRequestDTO;
+import com.artivio.backend.modules.product.dto.request.ProductRequestDTO;
 import com.artivio.backend.modules.product.mapper.CategoryMapper;
 import com.artivio.backend.modules.product.mapper.ProductMapper;
 import com.artivio.backend.modules.product.model.Category;
