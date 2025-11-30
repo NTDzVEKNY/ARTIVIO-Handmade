@@ -28,7 +28,7 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Order createOrder(OrderRequestDTO orderRequest) {
         // 1. Tạo đối tượng Order từ DTO
         Order order = orderMapper.toEntity(orderRequest);
@@ -38,9 +38,24 @@ public class OrderService {
 
         // 2. Duyệt qua danh sách sản phẩm khách chọn
         for (OrderItemRequestDTO itemDto : orderRequest.getItems()) {
-            OrderItem item = new OrderItem();
             Product product = productRepository.findById(itemDto.getProductId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + itemDto.getProductId()));
+            // --- KIỂM TRA TỒN KHO ---
+            if (product.getStockQuantity() < itemDto.getQuantity()) {
+                throw new RuntimeException("Sản phẩm " + product.getProductName() + " đã hết hàng hoặc không đủ số lượng!");
+            }
+
+            // TRỪ KHO & TĂNG ĐÃ BÁN ---
+            // Trừ kho
+            product.setStockQuantity(product.getStockQuantity() - itemDto.getQuantity());
+            // Tăng đã bán (xử lý null nếu là sp mới chưa bán cái nào)
+            int currentSold = product.getQuantitySold() == null ? 0 : product.getQuantitySold();
+            product.setQuantitySold(currentSold + itemDto.getQuantity());
+
+            // LƯU LẠI PRODUCT VÀO DB
+            productRepository.save(product);
+
+            OrderItem item = new OrderItem();
             item.setProduct(product);
             item.setQuantity(itemDto.getQuantity());
             item.setOrder(order);
