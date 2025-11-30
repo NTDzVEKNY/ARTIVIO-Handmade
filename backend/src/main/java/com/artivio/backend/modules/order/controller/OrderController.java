@@ -35,4 +35,42 @@ public class OrderController {
             return ResponseEntity.status(404).body(e.getMessage());
         }
     }
+
+    // 3. API Hủy đơn hàng (Khuyên dùng thay vì Delete)
+    // Method: PUT /api/orders/{id}/cancel
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long id) {
+        try {
+            Order order = orderService.cancelOrder(id);
+            return ResponseEntity.ok("Đã hủy đơn hàng thành công. Trạng thái: " + order.getStatus());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // 4. API Cập nhật trạng thái (Dành cho Admin/Shipper)
+    // Method: PUT /api/orders/{id}/status?status=SHIPPED
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
+        try {
+            Order order = orderService.updateOrderStatus(id, status);
+            return ResponseEntity.ok(order);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // API Xóa vĩnh viễn (Hard Delete)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteOrderPermanently(@PathVariable Long id) {
+        try {
+            // Gọi qua Service
+            orderService.deleteOrderPermanently(id);
+            return ResponseEntity.ok("Đã xóa đơn hàng và chi tiết liên quan.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(e.getMessage()); // Trả về 404 nếu không tìm thấy
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi khi xóa: " + e.getMessage());
+        }
+    }
 }
