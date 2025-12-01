@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import Image from "next/image";
 import Link from "next/link";
 
@@ -22,8 +23,11 @@ const categoryIcons: Record<string, string> = {
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAccountMenuOpen, setAccountMenuOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     fetch('/api/categories')
@@ -32,14 +36,24 @@ export default function Header() {
       .catch(err => console.error("Failed to fetch categories for header:", err));
 
     const handleClickOutside = (event: MouseEvent) => {
+      // Đóng dropdown danh mục
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+      }
+      // Đóng dropdown tài khoản
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    setAccountMenuOpen(false);
+    signOut({ callbackUrl: '/auth?mode=login' });
+  };
 
   return (
     <header className="w-full sticky top-0 z-40 shadow-sm" style={{ backgroundColor: '#6B4F3E' }}>
@@ -139,10 +153,51 @@ export default function Header() {
             </span>
             <span className="text-sm">Giỏ hàng</span>
           </Link>
-          <Link href="#" className="flex items-center gap-2 transition-all duration-300 group" style={{ color: '#F7F1E8' }}>
-            <span className="transform group-hover:scale-125 transition-transform duration-300">🚪</span>
-            <span className="text-sm">Đăng Nhập</span>
-          </Link>
+          {status === 'authenticated' ? (
+            <div className="relative" ref={accountMenuRef}>
+              <button onClick={() => setAccountMenuOpen(!isAccountMenuOpen)} className="flex items-center gap-2 transition-all duration-300 group" style={{ color: '#F7F1E8' }}>
+                <span className="relative transform group-hover:scale-125 transition-transform duration-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </span>
+                <span className="text-sm">{session.user?.name ?? 'Tài khoản'}</span>
+              </button>
+
+              {/* Dropdown Menu */}
+              <div className={`absolute top-full right-0 mt-2 w-48 rounded-lg shadow-lg transition-all duration-300 origin-top-right ${isAccountMenuOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`} style={{ backgroundColor: '#F7F1E8', border: '1px solid #D96C39' }}>
+                <div className="py-1">
+                  <Link href="/account" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-primary-light" style={{ color: '#3F2E23' }}>
+                    Tài khoản của tôi
+                  </Link>
+                  <Link href="/account/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-primary-light" style={{ color: '#3F2E23' }}>
+                    Đơn hàng của tôi
+                  </Link>
+                  <Link href="/cart" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-primary-light" style={{ color: '#3F2E23' }}>
+                    Giỏ hàng
+                  </Link>
+                  <div className="border-t my-1" style={{ borderColor: '#E8D5B5' }}></div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left block px-4 py-2 text-sm hover:bg-primary-light"
+                    style={{ color: '#D96C39' }}
+                  >
+                    Đăng xuất
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : status === 'unauthenticated' ? (
+            <Link href="/auth?mode=login" className="flex items-center gap-2 transition-all duration-300 group" style={{ color: '#F7F1E8' }}>
+              <span className="transform group-hover:scale-125 transition-transform duration-300">🚪</span>
+              <span className="text-sm">Đăng Nhập</span>
+            </Link>
+          ) : (
+            <div className="flex items-center gap-2" style={{ color: '#F7F1E8' }}>
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: '#F7F1E8' }}></span>
+            </div>
+          )
+          }
         </div>
       </div>
     </header>
