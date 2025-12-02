@@ -1,8 +1,8 @@
 package com.artivio.backend.modules.auth.controller;
 
-import com.artivio.backend.modules.auth.dto.RegisterResponse;
-import com.artivio.backend.modules.auth.dto.request.RegisterRequest;
+import com.artivio.backend.modules.auth.dto.response.RegisterResponse;
 import com.artivio.backend.modules.auth.model.User;
+import com.artivio.backend.modules.auth.dto.request.RegisterRequest;
 import com.artivio.backend.modules.auth.service.RegisterService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

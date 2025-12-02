@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.artivio.backend.modules.product.model.enums.EnumStatus;
+
 
 import java.util.List;
 
@@ -43,7 +45,8 @@ public class Product {
     private String image;
 
     @Column(name = "status")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private EnumStatus status;
     
     @Column(name = "description")
     private String description;
