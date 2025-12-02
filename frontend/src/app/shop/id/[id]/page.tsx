@@ -1,11 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Header, Footer } from '../../../../components/common';
-import type { Product } from '../../../../types';
+import Header from '@/components/common/Header';
+import Footer from '@/components/common/Footer';
+import type { Product as ProductImported } from '@/types';
+
+type Product = {
+  id?: number;
+  productName?: string;
+  name?: string;
+  price?: number | string;
+  image?: string | string[];
+  images?: string[];
+  description?: string;
+  stockQuantity?: number;
+  quantitySold?: number;
+  categoryId?: number | string;
+  categoryName?: string;
+};
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((i) => typeof i === 'string');
+}
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -30,13 +49,33 @@ export default function ProductDetailPage() {
     fetch(`/api/products/${productId}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<Product>;
+        return res.json() as Promise<ProductImported | unknown>;
       })
       .then((data) => {
-        setProduct(data);
-        // thiết lập quantity mặc định = 1 hoặc 1 nếu stock thấp hơn
-        const defaultQty = 1;
-        setQuantity(defaultQty);
+        // treat response as unknown and read fields with runtime guards (no `any`)
+        const raw = data as unknown as Record<string, unknown>;
+
+        const mapped: Product = {
+          id: typeof raw.id === 'number' ? (raw.id as number) : undefined,
+          productName:
+            typeof raw.productName === 'string' ? (raw.productName as string) : typeof raw.name === 'string' ? (raw.name as string) : undefined,
+          price: typeof raw.price === 'number' || typeof raw.price === 'string' ? (raw.price as number | string) : undefined,
+          images: isStringArray(raw.images) ? (raw.images as string[]) : undefined,
+          image:
+            typeof raw.image === 'string'
+              ? (raw.image as string)
+              : isStringArray(raw.image)
+              ? (raw.image as string[])
+              : undefined,
+          description: typeof raw.description === 'string' ? (raw.description as string) : undefined,
+          stockQuantity: typeof raw.stockQuantity === 'number' ? (raw.stockQuantity as number) : typeof raw.stock === 'number' ? (raw.stock as number) : undefined,
+          quantitySold: typeof raw.quantitySold === 'number' ? (raw.quantitySold as number) : undefined,
+          categoryId: typeof raw.categoryId === 'string' || typeof raw.categoryId === 'number' ? (raw.categoryId as number | string) : undefined,
+          categoryName: typeof raw.categoryName === 'string' ? (raw.categoryName as string) : undefined,
+        };
+
+        setProduct(mapped);
+        setQuantity(1);
       })
       .catch((err: unknown) => {
         setError('Không tải được sản phẩm');
@@ -50,10 +89,8 @@ export default function ProductDetailPage() {
       const max = product?.stockQuantity ?? 9999;
       return Math.min(max, q + 1);
     });
-  const decrease = () =>
-    setQuantity((q) => Math.max(1, q - 1));
+  const decrease = () => setQuantity((q) => Math.max(1, q - 1));
 
-  // xử lý nhập trực tiếp
   const onQuantityChange = (value: string) => {
     const parsed = Number(value);
     if (Number.isNaN(parsed)) {
@@ -65,6 +102,14 @@ export default function ProductDetailPage() {
     const clamped = Math.max(min, Math.min(max, Math.floor(parsed)));
     setQuantity(clamped);
   };
+
+  const images: string[] = useMemo(() => {
+    if (!product) return [];
+    if (Array.isArray(product.images) && product.images.length) return product.images;
+    if (Array.isArray(product.image) && product.image.length) return product.image as string[];
+    if (typeof product.image === 'string' && product.image) return [product.image];
+    return [];
+  }, [product]);
 
   return (
     <div className="min-h-screen font-sans text-gray-800 bg-white">
@@ -94,7 +139,7 @@ export default function ProductDetailPage() {
               <div className="relative rounded-2xl overflow-hidden shadow-lg">
                 <div className="w-full h-[420px] relative bg-gray-100">
                   <Image
-                    src={product.image ?? (product.images && product.images[0]) ?? '/hero-handmade.jpg'}
+                    src={images[selectedImageIndex] ?? images[0] ?? (typeof product.image === 'string' ? product.image : '/hero-handmade.jpg')}
                     alt={product.productName ?? product.name ?? 'Product'}
                     fill
                     className="object-cover"
@@ -103,11 +148,11 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {product.images && product.images.length > 1 && (
+              {images.length > 1 && (
                 <div className="mt-4 flex gap-3">
-                  {product.images.map((img, idx) => (
+                  {images.map((img: string, idx: number) => (
                     <button
-                      key={img + idx}
+                      key={`${img}-${idx}`}
                       onClick={() => setSelectedImageIndex(idx)}
                       className={`w-20 h-20 rounded-lg overflow-hidden border ${
                         idx === selectedImageIndex ? 'border-[#0f172a]' : 'border-gray-200'
@@ -126,7 +171,7 @@ export default function ProductDetailPage() {
                 ₫{(Number(product.price) || 0).toLocaleString('vi-VN')}
               </div>
 
-              <div className="text-sm text-gray-600">{product.description ?? product.fullDescription}</div>
+              <div className="text-sm text-gray-600">{product.description}</div>
 
               <div className="flex items-center gap-4 mt-4">
                 <div className="flex items-center border rounded-full overflow-hidden">
@@ -181,12 +226,7 @@ export default function ProductDetailPage() {
                   onClick={() => alert('Đặt làm riêng (mock)')}
                   className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-orange-600 to-yellow-500 text-white px-6 py-3 rounded-full font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-5 h-5"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                     <path
                       fillRule="evenodd"
                       d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 01.75.75c0 5.056-2.383 9.555-6.084 12.436A6.75 6.75 0 019.75 22.5a.75.75 0 01-.75-.75v-4.131A15.838 15.838 0 016.382 15H2.25a.75.75 0 01-.75-.75 6.75 6.75 0 017.815-6.666zM15 6.75a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z"
@@ -198,16 +238,13 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="text-sm text-gray-500">
-                Kho: {product.stockQuantity ?? product.stock ?? '—'} · Đã bán: {product.quantitySold ?? '—'}
+                Kho: {product.stockQuantity ?? '—'} · Đã bán: {product.quantitySold ?? '—'}
               </div>
 
               <div className="pt-4 border-t">
                 <h3 className="font-medium mb-2">Danh mục</h3>
-                <Link
-                  href={`/shop/products?categoryId=${product.categoryId}`}
-                  className="text-sm text-[#0f172a] hover:underline"
-                >
-                  {product.categoryName ?? product.category ?? 'Không xác định'}
+                <Link href={`/shop/products?categoryId=${product.categoryId ?? ''}`} className="text-sm text-[#0f172a] hover:underline">
+                  {product.categoryName ?? 'Không xác định'}
                 </Link>
               </div>
             </div>

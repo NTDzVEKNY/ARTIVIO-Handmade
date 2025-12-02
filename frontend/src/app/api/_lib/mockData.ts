@@ -1,4 +1,4 @@
-export const CATEGORIES = [
+const CATEGORIES_DATA = [
 	{ categoryId: 12345678, categoryName: 'Đồng hồ' },
 	{ categoryId: 27840013, categoryName: 'Hoa vĩnh cửu' },
 	{ categoryId: 30041975, categoryName: 'Quà tặng' },
@@ -9,7 +9,7 @@ export const CATEGORIES = [
 	{ categoryId: 99999999, categoryName: 'Limited' },
 ];
 
-export const PRODUCTS = [
+const PRODUCTS_DATA = [
 	{
 		id: 101179,
 		productName: 'Thảm trải sàn họa tiết Cờ Anh',
@@ -1571,3 +1571,42 @@ export const PRODUCTS = [
 		categoryName: 'Quà tặng',
 	},
 ];
+
+type User = {
+	id: number;
+	name: string;
+	email: string;
+	password?: string;
+	role: 'USER' | 'ADMIN';
+	createdAt: string;
+};
+
+const INITIAL_USERS: User[] = [
+	{
+		id: 1,
+		name: 'Admin',
+		email: 'admin@example.com',
+		// Mật khẩu dạng plain text để dễ dàng cho mock API
+		password: 'password123',
+		role: 'ADMIN',
+		createdAt: '2023-01-01T00:00:00.000Z',
+	},
+];
+
+// --- BỘ NHỚ TRUNG TÂM (IN-MEMORY DATABASE) ---
+
+// Tạo ra các bản sao có thể thay đổi được
+const usersStore: User[] = [...INITIAL_USERS];
+
+// Các hàm để thao tác với "cơ sở dữ liệu"
+export const db = {
+  users: {
+    find: (predicate: (user: User) => boolean) => usersStore.find(predicate),
+    some: (predicate: (user: User) => boolean) => usersStore.some(predicate),
+    push: (user: User) => usersStore.push(user),
+    findIndex: (predicate: (user: User) => boolean) => usersStore.findIndex(predicate),
+    updatePassword: (index: number, newPass: string) => { usersStore[index].password = newPass; },
+  },
+  products: [...PRODUCTS_DATA],
+  categories: [...CATEGORIES_DATA],
+};
