@@ -1,5 +1,6 @@
 package com.artivio.backend.modules.product.model;
 
+import com.artivio.backend.modules.order.model.OrderItem;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import com.artivio.backend.modules.product.model.enums.EnumStatus;
 
+
+import java.util.List;
 
 @Entity
 @Table(name = "products")
@@ -48,4 +51,7 @@ public class Product {
     @Column(name = "description")
     private String description;
 
+    // Quan hệ 1-nhiều với OrderItem
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<OrderItem> orderItems;
 }
