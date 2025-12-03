@@ -1,9 +1,12 @@
 package com.artivio.backend.modules.order.model;
+
+import com.artivio.backend.modules.order.model.Chat;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.ToString;
 
 @Entity
 @Table(name = "orders")
@@ -13,12 +16,17 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "customer_id", nullable = false)
-    private Long customerId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private User customer;
+
     @Column(name = "artisan_id")
     private Long artisanId;
-    @Column(name = "chat_id", nullable = true)
-    private Long chatId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_id", referencedColumnName = "id", nullable = true)
+    @ToString.Exclude
+    private Chat chat;
 
     @Column(name = "total_price")
     private BigDecimal totalPrice;
