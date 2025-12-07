@@ -1,5 +1,4 @@
-package com.artivio.backend.modules.auth.model;
-
+package com.artivio.backend.modules.chat.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -18,7 +17,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
-@Entity(name = "AuthUser")
+@Entity(name = "ChatUser")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,7 +28,7 @@ public class User implements UserDetails{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private int id;
+    private Long id;
 
     @Column(name = "name")
     private String username;
@@ -42,7 +41,7 @@ public class User implements UserDetails{
 
     @Column(name = "role")
     @Enumerated(EnumType.STRING)
-    private Role role;
+    private EnumRole role;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -55,6 +54,7 @@ public class User implements UserDetails{
     // Các phương thức của UserDetails
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (role == null) return List.of(); // Fix null pointer nếu role chưa set
         return List.of(new SimpleGrantedAuthority(role.name()));
     }
 
