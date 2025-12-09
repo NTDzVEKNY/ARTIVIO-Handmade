@@ -3,17 +3,18 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface LoginFormProps {
-  onLoginSuccess: () => void;
-  onForgotPasswordClick: () => void; // Thêm callback để xử lý khi nhấn quên mật khẩu
+  onForgotPasswordClick: () => void;
 }
 
-export default function LoginForm({ onLoginSuccess, onForgotPasswordClick }: LoginFormProps) {
+export default function LoginForm({ onForgotPasswordClick }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,22 +22,19 @@ export default function LoginForm({ onLoginSuccess, onForgotPasswordClick }: Log
     setIsLoading(true);
 
     try {
-      // Sử dụng signIn của next-auth cho đăng nhập bằng credentials
       const result = await signIn('credentials', {
-        redirect: false, // Quan trọng: không tự động chuyển hướng
+        redirect: false,
         email: email,
         password: password,
       });
 
       if (result?.error) {
-        // Nếu có lỗi, hiển thị thông báo từ next-auth
         setError(result.error);
       } else if (result?.ok) {
-        // Nếu thành công, gọi callback để chuyển hướng
-        onLoginSuccess();
+        // Chuyển hướng đến trang /auth/callback để xử lý logic role
+        router.push('/auth/callback');
       }
     } catch (err: unknown) {
-      // Xử lý các lỗi mạng hoặc lỗi không mong muốn khác
       setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
@@ -95,7 +93,7 @@ export default function LoginForm({ onLoginSuccess, onForgotPasswordClick }: Log
           <div>
             <button
               type="button"
-              onClick={() => signIn('google', { callbackUrl: '/' })}
+              onClick={() => signIn('google', { callbackUrl: '/auth/callback' })}
               className="w-full h-full inline-flex justify-center items-center py-2 px-4 border rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 transition-all duration-300 hover:shadow-lg hover:scale-105"
               style={{ borderColor: '#E8D5B5' }}
             >
@@ -106,7 +104,7 @@ export default function LoginForm({ onLoginSuccess, onForgotPasswordClick }: Log
           <div>
             <button
               type="button"
-              onClick={() => signIn('facebook', { callbackUrl: '/' })}
+              onClick={() => signIn('facebook', { callbackUrl: '/auth/callback' })}
               className="w-full h-full inline-flex justify-center items-center py-2 px-4 border rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 transition-all duration-300 hover:shadow-lg hover:scale-105"
               style={{ borderColor: '#E8D5B5' }}
             >

@@ -13,12 +13,14 @@ export default function ResetPasswordForm({ email, onSuccess, onResendCode }: Re
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [resendMessage, setResendMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
 
     if (newPassword !== confirmPassword) {
       setError('Mật khẩu mới không khớp.');
@@ -38,7 +40,10 @@ export default function ResetPasswordForm({ email, onSuccess, onResendCode }: Re
         throw new Error(data.message || 'Đã có lỗi xảy ra');
       }
 
-      onSuccess();
+      setSuccessMessage('Mật khẩu của bạn đã được đặt lại thành công! Đang chuyển hướng...');
+      setTimeout(() => {
+        onSuccess();
+      }, 3000);
 
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Lỗi không xác định');
@@ -57,6 +62,7 @@ export default function ResetPasswordForm({ email, onSuccess, onResendCode }: Re
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-lg">{error}</div>}
+      {successMessage && <div className="p-3 text-sm text-green-800 bg-green-100 border border-green-200 rounded-lg">{successMessage}</div>}
       {resendMessage && <div className="p-3 text-sm text-green-800 bg-green-100 border border-green-200 rounded-lg">{resendMessage}</div>}
 
       <p className="text-sm text-gray-600">Một mã xác thực đã được gửi đến <strong>{email}</strong>. Vui lòng nhập mã và mật khẩu mới của bạn.</p>
@@ -73,7 +79,7 @@ export default function ResetPasswordForm({ email, onSuccess, onResendCode }: Re
         <input type="password" id="confirmPassword" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Nhập lại mật khẩu mới" className="w-full px-4 py-3 rounded-lg border" style={{ borderColor: '#E8D5B5', backgroundColor: '#FFF8F0', color: '#3F2E23' }} />
       </div>
       <div className="pt-2">
-        <button type="submit" disabled={isLoading} className="w-full py-3 rounded-lg font-semibold disabled:opacity-70 disabled:cursor-not-allowed" style={{ backgroundColor: '#D96C39', color: '#FFF8F0' }}>
+        <button type="submit" disabled={isLoading || successMessage} className="w-full py-3 rounded-lg font-semibold disabled:opacity-70 disabled:cursor-not-allowed" style={{ backgroundColor: '#D96C39', color: '#FFF8F0' }}>
           {isLoading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
         </button>
       </div>

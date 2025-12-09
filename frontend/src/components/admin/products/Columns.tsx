@@ -1,0 +1,55 @@
+'use client';
+
+import { ColumnDef } from '@tanstack/react-table';
+import { CellAction } from './CellAction';
+import { Product } from '@/types';
+import Image from 'next/image';
+
+export const columns: ColumnDef<Product>[] = [
+  {
+    accessorKey: 'image',
+    header: 'Image',
+    cell: ({ row }) => (
+      <div className="relative h-10 w-10">
+        <Image
+          src={row.original.image || '/artivio-logo.png'} // Fallback image
+          alt={row.original.name}
+          fill
+          className="rounded-md object-cover"
+        />
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'name',
+    header: 'Name',
+  },
+  {
+    accessorKey: 'price',
+    header: 'Price',
+    cell: ({ row }) => {
+      const amount = parseFloat(row.getValue('price'));
+      const formatted = new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+      }).format(amount);
+      return <div className="font-medium">{formatted}</div>;
+    },
+  },
+  {
+    accessorKey: 'stock',
+    header: 'Stock',
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+  },
+  {
+    accessorKey: 'category.categoryName',
+    header: 'Category',
+  },
+  {
+    id: 'actions',
+    cell: ({ row }) => <CellAction data={row.original} />,
+  },
+];
