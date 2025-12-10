@@ -34,9 +34,8 @@ const handler = NextAuth({
           throw new Error('Tài khoản hoặc mật khẩu không chính xác');
         }
 
-        // Nếu thành công, trả về đối tượng user
-        // next-auth sẽ tự động tạo session và JWT
-        return { id: user.id.toString(), name: user.name, email: user.email };
+        // Nếu thành công, trả về đối tượng user bao gồm cả role
+        return { id: user.id.toString(), name: user.name, email: user.email, role: user.role };
       }
     })
   ],
@@ -68,21 +67,18 @@ const handler = NextAuth({
       return true; // Cho phép đăng nhập
     },
     async jwt({ token, user }) {
-      // Thêm thông tin vào token để sử dụng trong session
+      // Khi user đăng nhập (lần đầu tiên callback này được gọi), đối tượng `user` sẽ có sẵn.
+      // Thêm role vào token.
       if (user) {
-        const dbUser = db.users.find(dbUser => dbUser.email === user.email);
-        if (dbUser) {
-          token.role = dbUser.role;
-        }
+        token.role = (user as any).role;
       }
       return token;
     },
     async session({ session, token }) {
       // Thêm thông tin từ token vào đối tượng session để client có thể sử dụng
       if (session.user) {
-        // Gán role một cách an toàn
-        type UserWithRole = typeof session.user & { role?: unknown };
-        (session.user as UserWithRole).role = token.role;
+        // Gán role từ token vào session.user
+        (session.user as any).role = token.role;
       }
       return session;
     },

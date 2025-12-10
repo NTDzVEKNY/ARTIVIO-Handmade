@@ -194,8 +194,8 @@ export default function Header() {
                     }}
                     className="w-full text-left block px-4 py-2 text-sm hover:bg-primary-light"
                     style={{ color: '#3F2E23' }}
-                  >
-                    Giỏ hàng
+                  >                    
+                  Giỏ hàng
                   </button>
                   <div className="border-t my-1" style={{ borderColor: '#E8D5B5' }}></div>
                   <button
@@ -221,7 +221,6 @@ export default function Header() {
           }
         </div>
       </div>
-
       {/* Cart Sidebar */}
       <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </header>

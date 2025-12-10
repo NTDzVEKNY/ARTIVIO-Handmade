@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
 
 /**
  * Hàm fetch API chung, có khả năng xử lý nhiều phương thức và kiểu dữ liệu trả về.
@@ -7,7 +7,12 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
  * @returns Promise chứa dữ liệu JSON trả về
  */
 export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const isServer = typeof window === 'undefined';
+    const baseUrl = isServer 
+      ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+      : process.env.NEXT_PUBLIC_API_URL || '/api';
+      
+    const url = `${baseUrl}${endpoint}`;
 
     const defaultHeaders = {
         'Content-Type': 'application/json',

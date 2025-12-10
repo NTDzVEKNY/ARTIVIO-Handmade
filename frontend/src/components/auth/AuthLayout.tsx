@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import React, { ReactNode } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 interface Props {
   title?: string;
@@ -28,7 +29,9 @@ export default function AuthLayout({
       <div className="w-full max-w-6xl bg-white rounded-2xl shadow-lg overflow-hidden" style={{ border: '1px solid rgba(107,79,62,0.06)' }}>
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* LOGO PANEL */}
-          <div
+          <motion.div
+            layout
+            transition={{ duration: 0.5, type: 'spring', bounce: 0.2 }}
             className={`relative hidden lg:block ${imageOnLeft ? 'lg:order-first' : 'lg:order-last'}`}
             style={{ backgroundColor: '#F4C27A', minHeight: '600px' }}
           >
@@ -45,7 +48,7 @@ export default function AuthLayout({
                 />
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* FORM */}
           <div className={`p-10 lg:p-14 ${imageOnLeft ? 'lg:order-last' : 'lg:order-first'}`}>

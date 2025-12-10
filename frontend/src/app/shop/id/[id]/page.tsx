@@ -68,8 +68,8 @@ export default function ProductDetailPage() {
             typeof raw.image === 'string'
               ? (raw.image as string)
               : isStringArray(raw.image)
-              ? (raw.image as string[])
-              : undefined,
+                ? (raw.image as string[])
+                : undefined,
           description: typeof raw.description === 'string' ? (raw.description as string) : undefined,
           stockQuantity: typeof raw.stockQuantity === 'number' ? (raw.stockQuantity as number) : typeof raw.stock === 'number' ? (raw.stock as number) : undefined,
           quantitySold: typeof raw.quantitySold === 'number' ? (raw.quantitySold as number) : undefined,
@@ -117,13 +117,13 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product || !product.id) return;
 
-    const productImage = Array.isArray(product.image) 
-      ? product.image[0] 
-      : typeof product.image === 'string' 
-      ? product.image 
-      : Array.isArray(product.images) && product.images.length > 0
-      ? product.images[0]
-      : '/hero-handmade.jpg';
+    const productImage = Array.isArray(product.image)
+      ? product.image[0]
+      : typeof product.image === 'string'
+        ? product.image
+        : Array.isArray(product.images) && product.images.length > 0
+          ? product.images[0]
+          : '/hero-handmade.jpg';
 
     addItem({
       id: product.id,
@@ -187,9 +187,8 @@ export default function ProductDetailPage() {
                     <button
                       key={`${img}-${idx}`}
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`w-20 h-20 rounded-lg overflow-hidden border ${
-                        idx === selectedImageIndex ? 'border-[#0f172a]' : 'border-gray-200'
-                      }`}
+                      className={`w-20 h-20 rounded-lg overflow-hidden border ${idx === selectedImageIndex ? 'border-[#0f172a]' : 'border-gray-200'
+                        }`}
                     >
                       <Image src={img} alt={`img-${idx}`} width={80} height={80} className="object-cover" />
                     </button>
@@ -240,9 +239,8 @@ export default function ProductDetailPage() {
 
                 <div className="flex items-center gap-3">
                   <button
-                    className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${
-                      addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''
-                    }`}
+                    className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''
+                      }`}
                     onClick={handleAddToCart}
                     disabled={!product || (product.stockQuantity !== undefined && product.stockQuantity <= 0)}
                   >
