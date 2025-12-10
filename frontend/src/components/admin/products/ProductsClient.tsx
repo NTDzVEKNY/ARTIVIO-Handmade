@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Edit, Trash, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product, Category } from '@/types';
 import { fetchApi } from '@/services/api';
 import { DataTable } from '@/components/ui/data-table';
-import { columns } from '@/app/admin/products/columns';
+import { ColumnDef } from '@tanstack/react-table';
+import toast, { Toast } from 'react-hot-toast';
+import Image from 'next/image';
 
 // --- Filter Definitions ---
 const PRICE_RANGES = [
@@ -35,12 +37,6 @@ const inputStyles: React.CSSProperties = {
   padding: '0.5rem 1rem',
   boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
   width: '100%',
-};
-
-const selectStyles: React.CSSProperties = {
-    ...inputStyles,
-    paddingRight: '2.5rem',
-    appearance: 'none',
 };
 
 // --- Main Component ---
@@ -114,6 +110,106 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
     return `${categoryName} (${filteredProducts.length})`;
   }, [selectedCategoryId, categories, filteredProducts.length]);
 
+  const handleRowClick = (product: Product) => {
+    router.push(`/admin/products/${product.id}`);
+  };
+
+  const confirmDeleteAction = (productName: string, onConfirm: () => void) => {
+    toast(
+      (t: Toast) => (
+        <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-lg shadow-2xl border border-red-300 max-w-md">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-10 w-10 text-red-500" />
+            <h3 className="text-2xl font-bold text-red-700">Xác nhận xóa</h3>
+          </div>
+          <p className="text-center text-gray-700 mt-2">
+            Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa vĩnh viễn sản phẩm <strong className="text-red-600">&quot;{productName}&quot;</strong> không?
+          </p>
+          <div className="flex w-full justify-center gap-4 mt-4">
+            <button
+              className="px-6 py-2 text-base font-semibold rounded-full text-white bg-red-600 hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              onClick={() => {
+                onConfirm();
+                toast.dismiss(t.id);
+              }}
+            >
+              Xóa vĩnh viễn
+            </button>
+            <button
+              className="px-6 py-2 text-base font-semibold rounded-full text-gray-700 bg-gray-200 hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+              onClick={() => toast.dismiss(t.id)}
+            >
+              Hủy
+            </button>
+          </div>
+        </div>
+      ),
+      { 
+        duration: Infinity,
+      }
+    );
+  };
+
+  const handleDeleteProduct = (productId: number, productName: string) => {
+    confirmDeleteAction(productName, async () => {
+        try {
+            await fetchApi(`/products/${productId}`, { method: 'DELETE' });
+            toast.success(`Đã xóa sản phẩm "${productName}" thành công.`);
+            router.refresh(); // Tải lại dữ liệu từ server để cập nhật bảng
+        } catch (error) {
+            console.error("Failed to delete product:", error);
+            toast.error(`Xóa sản phẩm "${productName}" thất bại.`);
+        }
+    });
+  };
+
+  const columns: ColumnDef<Product>[] = useMemo(() => [
+    {
+      header: 'Sản phẩm',
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <div className="flex items-center gap-4 font-medium whitespace-nowrap" style={{ color: '#3F2E23' }}>
+            <Image src={product.image} alt={product.productName} width={48} height={48} className="rounded-md object-cover" />
+            <span className="font-bold">{product.productName}</span>
+          </div>
+        );
+      }
+    },
+    { accessorKey: 'price', header: 'Giá', cell: ({ row }) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(row.original.price) },
+    { accessorKey: 'stockQuantity', header: 'Tồn kho' },
+    { accessorKey: 'status', header: 'Trạng thái', cell: ({ row }) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ row.original.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }`}>
+          {row.original.status === 'ACTIVE' ? 'Hoạt động' : 'Bị ẩn'}
+        </span>
+      )
+    },
+    {
+      id: 'actions',
+      header: () => <div className="text-right">Hành động</div>,
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                router.push(`/admin/products/${product.id}`);
+              }} 
+              className="p-2 rounded-full text-blue-500 hover:bg-blue-100 transition-colors" 
+              title="Xem chi tiết & Chỉnh sửa"
+            ><Edit className="h-4 w-4" /></button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteProduct(product.id, product.productName);
+              }} className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors" title="Xóa sản phẩm"><Trash className="h-4 w-4" /></button>
+          </div>
+        );
+      }
+    }
+  ], [router]);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -123,7 +219,7 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
             {title}
           </h1>
           <p className="text-sm" style={{ color: '#6B4F3E' }}>
-            Quản lý và lọc sản phẩm cho cửa hàng của bạn.
+            Dễ dàng quản lý, sắp xếp và theo dõi sản phẩm của bạn.
           </p>
         </div>
         <button
@@ -155,14 +251,14 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
             {/* Price Range */}
             <div>
                 <label htmlFor="price-range" className="block text-sm font-medium mb-2" style={{color: '#3F2E23'}}>Lọc theo giá</label>
-                 <select id="price-range" value={priceRange} onChange={e => setPriceRange(e.target.value)} style={selectStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none">
+                 <select id="price-range" value={priceRange} onChange={e => setPriceRange(e.target.value)} style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none">
                     {PRICE_RANGES.map(range => <option key={range.id} value={range.id}>{range.label}</option>)}
                 </select>
             </div>
             {/* Sort By */}
             <div>
                 <label htmlFor="sort-by" className="block text-sm font-medium mb-2" style={{color: '#3F2E23'}}>Sắp xếp theo</label>
-                <select id="sort-by" value={sortBy} onChange={e => setSortBy(e.target.value)} style={selectStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none">
+                <select id="sort-by" value={sortBy} onChange={e => setSortBy(e.target.value)} style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none">
                     {SORT_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                 </select>
             </div>
@@ -207,7 +303,7 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
       
       {/* Product Table */}
       <div className="rounded-xl" style={{ backgroundColor: '#FDFBF7', border: '1px solid #E8D5B5' }}>
-        <DataTable columns={columns} data={filteredProducts} />
+        <DataTable columns={columns} data={filteredProducts} onRowClick={handleRowClick} />
       </div>
     </div>
   );

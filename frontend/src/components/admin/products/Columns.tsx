@@ -8,12 +8,12 @@ import Image from 'next/image';
 export const columns: ColumnDef<Product>[] = [
   {
     accessorKey: 'image',
-    header: 'Image',
+    header: 'Hình ảnh',
     cell: ({ row }) => (
       <div className="relative h-10 w-10">
         <Image
           src={row.original.image || '/artivio-logo.png'} // Fallback image
-          alt={row.original.name}
+          alt={row.original.productName}
           fill
           className="rounded-md object-cover"
         />
@@ -21,12 +21,12 @@ export const columns: ColumnDef<Product>[] = [
     ),
   },
   {
-    accessorKey: 'name',
-    header: 'Name',
+    accessorKey: 'productName',
+    header: 'Tên sản phẩm',
   },
   {
     accessorKey: 'price',
-    header: 'Price',
+    header: 'Giá',
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue('price'));
       const formatted = new Intl.NumberFormat('vi-VN', {
@@ -37,16 +37,16 @@ export const columns: ColumnDef<Product>[] = [
     },
   },
   {
-    accessorKey: 'stock',
-    header: 'Stock',
+    accessorKey: 'stockQuantity',
+    header: 'Tồn kho',
   },
   {
     accessorKey: 'status',
-    header: 'Status',
+    header: 'Trạng thái',
   },
   {
-    accessorKey: 'category.categoryName',
-    header: 'Category',
+    accessorKey: 'categoryName',
+    header: 'Danh mục',
   },
   {
     id: 'actions',

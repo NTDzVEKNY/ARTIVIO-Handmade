@@ -5,6 +5,7 @@ import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { Toaster } from 'react-hot-toast';
 import {
   CircleUser,
   Home,
@@ -134,68 +135,82 @@ export default function AdminLayout({
 
 
   return (
-    <div
-      className={`grid min-h-screen w-full ${
-        isSidebarCollapsed ? 'md:grid-cols-[80px_1fr]' : 'md:grid-cols-[280px_1fr]'
-      } transition-all duration-300 ease-in-out`}
-      style={{ backgroundColor: '#F7F1E8' }}
-    >
-      {/* --- Desktop Sidebar --- */}
-      <div className="hidden md:block" style={{ backgroundColor: '#F7F1E8', borderRight: '1px solid #E8D5B5' }}>
-        <div className="flex h-full max-h-screen flex-col">
-          <div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6" style={{ borderColor: '#E8D5B5' }}>
-            <button onClick={toggleSidebar} className="flex items-center gap-2 font-semibold" style={{ color: '#3F2E23' }}>
-              <Image src="/artivio-logo.png" alt="Artivio Logo" width={40} height={40} />
-              {!isSidebarCollapsed && <span className="transition-opacity duration-300 ease-in-out">ARTIVIO</span>}
-            </button>
-          </div>
-          <div className="flex-1 py-4">
-            <SidebarContent isCollapsed={isSidebarCollapsed} />
-          </div>
-        </div>
-      </div>
-
-      {/* --- Mobile Menu Overlay (replaces Sheet) --- */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-            <div className="fixed left-0 top-0 h-full w-4/5 max-w-xs flex flex-col p-4" style={{ backgroundColor: '#F7F1E8' }} onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 text-lg font-semibold" style={{ color: '#3F2E23' }}>
-                      <Image src="/artivio-logo.png" alt="Artivio Logo" width={30} height={30} />
-                      <span>ARTIVIO</span>
-                    </div>
-                    <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-full hover:bg-[#E8D5B5]">
-                        <X className="h-5 w-5" style={{ color: '#3F2E23' }}/>
-                    </button>
-                </div>
-                <SidebarContent isCollapsed={false} />
+    <>
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          success: {
+            style: {
+              background: '#28a745',
+              color: 'white',
+            },
+          },
+        }}
+      />
+      <div
+        className={`grid min-h-screen w-full ${
+          isSidebarCollapsed ? 'md:grid-cols-[80px_1fr]' : 'md:grid-cols-[280px_1fr]'
+        } transition-all duration-300 ease-in-out`}
+        style={{ backgroundColor: '#F7F1E8' }}
+      >
+        {/* --- Desktop Sidebar --- */}
+        <div className="hidden md:block" style={{ backgroundColor: '#F7F1E8', borderRight: '1px solid #E8D5B5' }}>
+          <div className="flex h-full max-h-screen flex-col">
+            <div className="flex h-14 items-center justify-center border-b px-4 lg:h-[60px] lg:px-6" style={{ borderColor: '#E8D5B5' }}>
+              <button onClick={toggleSidebar} className="flex items-center gap-2 font-semibold" style={{ color: '#3F2E23' }}>
+                <Image src="/artivio-logo.png" alt="Artivio Logo" width={40} height={40} />
+                {!isSidebarCollapsed && <span className="transition-opacity duration-300 ease-in-out">ARTIVIO</span>}
+              </button>
             </div>
-        </div>
-      )}
-
-      {/* --- Main Header and Content --- */}
-      <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b px-4 lg:h-[60px] lg:px-6" style={{ backgroundColor: '#F7F1E8', borderColor: '#E8D5B5' }}>
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="shrink-0 md:hidden h-10 w-10 flex items-center justify-center rounded-md"
-            style={{ border: '1px solid #E8D5B5', color: '#3F2E23' }}
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle navigation menu</span>
-          </button>
-          
-          <div className="w-full flex-1">
-            {/* Header content can go here */}
+            <div className="flex-1 py-4">
+              <SidebarContent isCollapsed={isSidebarCollapsed} />
+            </div>
           </div>
-          
-          <UserDropdown />
+        </div>
 
-        </header>
-        <main className="flex-1 overflow-y-auto p-6 md:px-10 lg:px-12 py-12">
-          {children}
-        </main>
+        {/* --- Mobile Menu Overlay (replaces Sheet) --- */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+              <div className="fixed left-0 top-0 h-full w-4/5 max-w-xs flex flex-col p-4" style={{ backgroundColor: '#F7F1E8' }} onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2 text-lg font-semibold" style={{ color: '#3F2E23' }}>
+                        <Image src="/artivio-logo.png" alt="Artivio Logo" width={30} height={30} />
+                        <span>ARTIVIO</span>
+                      </div>
+                      <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-full hover:bg-[#E8D5B5]">
+                          <X className="h-5 w-5" style={{ color: '#3F2E23' }}/>
+                      </button>
+                  </div>
+                  <SidebarContent isCollapsed={false} />
+              </div>
+          </div>
+        )}
+
+        {/* --- Main Header and Content --- */}
+        <div className="flex flex-col">
+          <header className="flex h-14 items-center gap-4 border-b px-4 lg:h-[60px] lg:px-6" style={{ backgroundColor: '#F7F1E8', borderColor: '#E8D5B5' }}>
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="shrink-0 md:hidden h-10 w-10 flex items-center justify-center rounded-md"
+              style={{ border: '1px solid #E8D5B5', color: '#3F2E23' }}
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle navigation menu</span>
+            </button>
+            
+            <div className="w-full flex-1">
+              {/* Header content can go here */}
+            </div>
+            
+            <UserDropdown />
+
+          </header>
+          <main className="flex-1 overflow-y-auto p-6 md:px-10 lg:px-12 py-12">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

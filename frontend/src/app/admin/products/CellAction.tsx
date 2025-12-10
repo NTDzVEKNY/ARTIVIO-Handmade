@@ -34,11 +34,14 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   return (
     <div className="relative" ref={menuRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
         className="h-8 w-8 p-0 flex items-center justify-center rounded-full hover:bg-[#FFF8F0]"
         style={{ color: '#6B4F3E' }}
       >
-        <span className="sr-only">Open menu</span>
+        <span className="sr-only">Mở menu</span>
         <MoreHorizontal className="h-4 w-4" />
       </button>
 
@@ -48,14 +51,14 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
           style={{ backgroundColor: '#FFF8F0', border: '1px solid #E8D5B5' }}
         >
           <div className="px-4 py-2 text-xs font-semibold" style={{ color: '#6B4F3E' }}>
-            Actions
+            Hành động
           </div>
           <button
             onClick={() => onCopy(data.id.toString())}
             className="w-full text-left px-4 py-2 text-sm flex items-center hover:bg-[#FCE9D8]"
             style={{ color: '#3F2E23' }}
           >
-            Copy ID
+            Sao chép ID
           </button>
           <button
             onClick={() => { /* Logic for updating product */ setIsOpen(false); }}
@@ -63,14 +66,14 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
             style={{ color: '#3F2E23' }}
           >
             <Edit className="mr-2 h-4 w-4" />
-            Update
+            Cập nhật
           </button>
           <button
             onClick={() => { /* Logic for deleting, was setOpen(true) for a modal */ setIsOpen(false); }}
             className="w-full text-left px-4 py-2 text-sm flex items-center hover:bg-[#FCE9D8] text-red-600 hover:text-red-700"
           >
             <Trash className="mr-2 h-4 w-4" />
-            Delete
+            Xóa
           </button>
         </div>
       )}

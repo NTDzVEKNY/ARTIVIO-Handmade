@@ -33,11 +33,13 @@ const paginationButtonDisabledStyles: React.CSSProperties = {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onRowClick?: (row: TData) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -74,6 +76,8 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
+                  onClick={() => onRowClick && onRowClick(row.original)}
+                  className={onRowClick ? 'cursor-pointer' : ''}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -91,29 +95,58 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  Không có kết quả.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
+      <div className="flex items-center justify-center space-x-2 py-4">
         <button
           className="px-4 py-2 text-sm rounded-md font-medium shadow-sm transition-transform transform hover:scale-105"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
           style={!table.getCanPreviousPage() ? paginationButtonDisabledStyles : paginationButtonStyles}
         >
-          Previous
+          Trang trước
         </button>
+        
+        {Array.from({ length: table.getPageCount() }).map((_, i) => {
+          const pageIndex = table.getState().pagination.pageIndex;
+          const pageCount = table.getPageCount();
+          const show = pageCount <= 7 || Math.abs(i - pageIndex) <= 2 || i === 0 || i === pageCount - 1;
+          if (!show) {
+            const leftGap = i === 1 && pageIndex > 3;
+            const rightGap = i === pageCount - 2 && pageIndex < pageCount - 4;
+            if (leftGap || rightGap) {
+              return <span key={`gap-${i}`} className="px-2 font-medium" style={{ color: '#D96C39' }}>…</span>;
+            }
+            return null;
+          }
+          return (
+            <button
+              key={i}
+              onClick={() => table.setPageIndex(i)}
+              className="px-4 py-2 text-sm rounded-md font-medium shadow-sm transition-transform transform hover:scale-105"
+              style={{
+                ...paginationButtonStyles,
+                backgroundColor: i === pageIndex ? '#D96C39' : '#F7F1E8',
+                color: i === pageIndex ? 'white' : '#3F2E23',
+              }}
+            >
+              {i + 1}
+            </button>
+          );
+        })}
+
         <button
           className="px-4 py-2 text-sm rounded-md font-medium shadow-sm transition-transform transform hover:scale-105"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
           style={!table.getCanNextPage() ? paginationButtonDisabledStyles : paginationButtonStyles}
         >
-          Next
+          Trang sau
         </button>
       </div>
     </div>

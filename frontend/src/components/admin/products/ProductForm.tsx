@@ -17,6 +17,11 @@ const inputStyles: React.CSSProperties = {
   width: '100%',
 };
 
+const selectStyles: React.CSSProperties = {
+  ...inputStyles,
+  padding: '0.75rem 1rem',
+};
+
 const labelStyles: React.CSSProperties = {
     color: '#3F2E23',
     fontSize: '0.875rem',
@@ -87,35 +92,35 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData }) => {
     }
   };
 
-  const action = initialData ? 'Save changes' : 'Create';
+  const action = initialData ? 'Lưu thay đổi' : 'Tạo';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 w-full">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
         <div className="space-y-2">
-          <label htmlFor="name" style={labelStyles}>Name</label>
-          <input id="name" value={productName} onChange={(e) => setProductName(e.target.value)} disabled={loading} placeholder="Product name" style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none" />
+          <label htmlFor="name" style={labelStyles}>Tên sản phẩm</label>
+          <input id="name" value={productName} onChange={(e) => setProductName(e.target.value)} disabled={loading} placeholder="Tên sản phẩm" style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none" />
         </div>
         
         <div className="space-y-2">
-          <label htmlFor="price" style={labelStyles}>Price</label>
+          <label htmlFor="price" style={labelStyles}>Giá</label>
           <input id="price" value={price} onChange={(e) => setPrice(Number(e.target.value))} type="number" disabled={loading} placeholder="9.99" style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none" />
         </div>
         
         <div className="space-y-2">
-          <label htmlFor="stock" style={labelStyles}>Stock</label>
+          <label htmlFor="stock" style={labelStyles}>Số lượng tồn kho</label>
           <input id="stock" value={stockQuantity} onChange={(e) => setStockQuantity(Number(e.target.value))} type="number" disabled={loading} placeholder="100" style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none" />
         </div>
         
         <div className="space-y-2">
-          <label htmlFor="category" style={labelStyles}>Category</label>
+          <label htmlFor="category" style={labelStyles}>Danh mục</label>
           <select
             id="category"
             disabled={loading}
             onChange={(e) => setCategoryId(Number(e.target.value))}
             value={String(categoryId)}
-            style={inputStyles}
+            style={selectStyles}
             className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none"
           >
             {categories.map((category) => (
@@ -127,21 +132,21 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData }) => {
         </div>
 
         <div className="space-y-2">
-            <label htmlFor="status" style={labelStyles}>Status</label>
-            <select disabled={loading} onChange={(e) => setStatus(e.target.value)} value={status} style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none">
-                <option value="ACTIVE">Active</option>
-                <option value="HIDDEN">Hidden</option>
+            <label htmlFor="status" style={labelStyles}>Trạng thái</label>
+            <select disabled={loading} onChange={(e) => setStatus(e.target.value)} value={status} style={selectStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none">
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="HIDDEN">Ẩn</option>
             </select>
         </div>
         
         <div className="space-y-2 md:col-span-3">
-          <label htmlFor="description" style={labelStyles}>Description</label>
-          <input id="description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={loading} placeholder="Product description" style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none" />
+          <label htmlFor="description" style={labelStyles}>Mô tả</label>
+          <input id="description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={loading} placeholder="Mô tả sản phẩm" style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none" />
         </div>
         
         <div className="space-y-2 md:col-span-3">
-            <label htmlFor="image" style={labelStyles}>Image URL</label>
-            <input id="image" value={image} onChange={(e) => setImage(e.target.value)} disabled={loading} placeholder="Image URL" style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none" />
+            <label htmlFor="image" style={labelStyles}>Hình ảnh</label>
+            <input id="image" value={image} onChange={(e) => setImage(e.target.value)} disabled={loading} placeholder="Đường dẫn hình ảnh" style={inputStyles} className="focus:ring-2 focus:ring-[#D96C39] focus:border-transparent focus:outline-none" />
         </div>
       </div>
       
