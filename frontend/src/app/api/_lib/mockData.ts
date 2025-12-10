@@ -1598,6 +1598,9 @@ const INITIAL_USERS: User[] = [
 // Tạo ra các bản sao có thể thay đổi được
 const usersStore: User[] = [...INITIAL_USERS];
 
+// Orders storage
+const ordersStore: any[] = [];
+
 // Các hàm để thao tác với "cơ sở dữ liệu"
 export const db = {
   users: {
@@ -1609,4 +1612,10 @@ export const db = {
   },
   products: [...PRODUCTS_DATA],
   categories: [...CATEGORIES_DATA],
+  orders: {
+    push: (order: any) => ordersStore.push(order),
+    find: (predicate: (order: any) => boolean) => ordersStore.find(predicate),
+    filter: (predicate: (order: any) => boolean) => ordersStore.filter(predicate),
+    findIndex: (predicate: (order: any) => boolean) => ordersStore.findIndex(predicate),
+  },
 };
