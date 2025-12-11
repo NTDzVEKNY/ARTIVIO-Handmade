@@ -108,9 +108,10 @@ export default function CheckoutPage() {
       setTimeout(() => {
         router.push(`/checkout/success?orderId=${response.orderId}&orderNumber=${response.orderNumber}`);
       }, 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Order submission error:', error);
-      alert(error.message || 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.');
+      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.';
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
