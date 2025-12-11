@@ -1,20 +1,69 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/contexts/CartContext';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
+import { useToast } from '@/components/ui/toast';
+import { fetchApi } from '@/services/api';
 
 export default function CartPage() {
     const { items, removeItem, updateQuantity, clearCart, getTotalPrice } = useCart();
+    const { showToast } = useToast();
     const [isClearing, setIsClearing] = useState(false);
+    const [stockWarnings, setStockWarnings] = useState<Record<number, { message: string; stock: number }>>({});
+    const [isValidatingStock, setIsValidatingStock] = useState(false);
+
+    // Validate stock availability
+    useEffect(() => {
+        const validateStock = async () => {
+            if (items.length === 0) {
+                setStockWarnings({});
+                return;
+            }
+
+            setIsValidatingStock(true);
+            const warnings: Record<number, { message: string; stock: number }> = {};
+
+            try {
+                await Promise.all(
+                    items.map(async (item) => {
+                        try {
+                            const product = await fetchApi<{ stockQuantity: number; productName: string }>(
+                                `/products/${item.id}`
+                            );
+                            if (product.stockQuantity < item.quantity) {
+                                warnings[item.id] = {
+                                    message: `Chỉ còn ${product.stockQuantity} sản phẩm trong kho`,
+                                    stock: product.stockQuantity,
+                                };
+                            } else if (product.stockQuantity < item.quantity + 3) {
+                                warnings[item.id] = {
+                                    message: `Còn ${product.stockQuantity} sản phẩm - Sắp hết hàng`,
+                                    stock: product.stockQuantity,
+                                };
+                            }
+                        } catch (error) {
+                            console.error(`Failed to validate stock for product ${item.id}:`, error);
+                        }
+                    })
+                );
+            } finally {
+                setStockWarnings(warnings);
+                setIsValidatingStock(false);
+            }
+        };
+
+        validateStock();
+    }, [items]);
 
     const handleClearCart = () => {
         if (window.confirm('Bạn có chắc chắn muốn xóa tất cả sản phẩm trong giỏ hàng?')) {
             setIsClearing(true);
             clearCart();
+            showToast('Đã xóa tất cả sản phẩm khỏi giỏ hàng', 'info');
             setTimeout(() => setIsClearing(false), 300);
         }
     };
@@ -22,8 +71,16 @@ export default function CartPage() {
     const handleQuantityChange = (id: number, newQuantity: number) => {
         if (newQuantity <= 0) {
             removeItem(id);
+            showToast('Đã xóa sản phẩm khỏi giỏ hàng', 'info');
         } else {
-            updateQuantity(id, newQuantity);
+            // Check stock limit
+            const warning = stockWarnings[id];
+            if (warning && newQuantity > warning.stock) {
+                showToast(`Số lượng tối đa là ${warning.stock} sản phẩm`, 'warning');
+                updateQuantity(id, warning.stock);
+            } else {
+                updateQuantity(id, newQuantity);
+            }
         }
     };
 
@@ -89,6 +146,15 @@ export default function CartPage() {
                                                             {item.productName}
                                                         </h3>
                                                     </Link>
+                                                    {stockWarnings[item.id] && (
+                                                        <div className={`mb-2 p-2 rounded-lg text-xs ${
+                                                            stockWarnings[item.id].message.includes('Chỉ còn')
+                                                                ? 'bg-red-50 text-red-700 border border-red-200'
+                                                                : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                                        }`}>
+                                                            ⚠️ {stockWarnings[item.id].message}
+                                                        </div>
+                                                    )}
                                                     <p className="text-xl font-bold text-[#0f172a] mb-4">
                                                         ₫{(Number(item.price) || 0).toLocaleString('vi-VN')}
                                                     </p>
@@ -124,7 +190,10 @@ export default function CartPage() {
                                                             onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                                                             aria-label="Tăng số lượng"
                                                             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                                            disabled={item.quantity >= (item.stockQuantity ?? 9999)}
+                                                            disabled={
+                                                                item.quantity >= (item.stockQuantity ?? 9999) ||
+                                                                (stockWarnings[item.id] && item.quantity >= stockWarnings[item.id].stock)
+                                                            }
                                                         >
                                                             +
                                                         </button>
@@ -179,9 +248,16 @@ export default function CartPage() {
                                     </div>
 
                                     <div className="space-y-3">
+                                        {isValidatingStock && (
+                                            <div className="text-xs text-gray-500 text-center py-2">
+                                                Đang kiểm tra tồn kho...
+                                            </div>
+                                        )}
                                         <Link
                                             href="/checkout"
-                                            className="block w-full bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
+                                            className={`block w-full bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center ${
+                                                isValidatingStock ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+                                            }`}
                                         >
                                             Thanh toán
                                         </Link>
