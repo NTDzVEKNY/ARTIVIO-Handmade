@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
+import { useCart } from '@/contexts/CartContext';
 import type { Product as ProductImported } from '@/types';
 
 type Product = {
@@ -29,12 +30,14 @@ function isStringArray(v: unknown): v is string[] {
 export default function ProductDetailPage() {
   const params = useParams();
   const productId = Number(params.id);
+  const { addItem, getItemQuantity } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [addToCartSuccess, setAddToCartSuccess] = useState(false);
 
   useEffect(() => {
     if (!productId || Number.isNaN(productId)) {
@@ -65,8 +68,8 @@ export default function ProductDetailPage() {
             typeof raw.image === 'string'
               ? (raw.image as string)
               : isStringArray(raw.image)
-              ? (raw.image as string[])
-              : undefined,
+                ? (raw.image as string[])
+                : undefined,
           description: typeof raw.description === 'string' ? (raw.description as string) : undefined,
           stockQuantity: typeof raw.stockQuantity === 'number' ? (raw.stockQuantity as number) : typeof raw.stock === 'number' ? (raw.stock as number) : undefined,
           quantitySold: typeof raw.quantitySold === 'number' ? (raw.quantitySold as number) : undefined,
@@ -111,6 +114,36 @@ export default function ProductDetailPage() {
     return [];
   }, [product]);
 
+  const handleAddToCart = () => {
+    if (!product || !product.id) return;
+
+    const productImage = Array.isArray(product.image)
+      ? product.image[0]
+      : typeof product.image === 'string'
+        ? product.image
+        : Array.isArray(product.images) && product.images.length > 0
+          ? product.images[0]
+          : '/hero-handmade.jpg';
+
+    addItem({
+      id: product.id,
+      productName: product.productName ?? product.name ?? 'Sản phẩm',
+      price: String(product.price ?? 0),
+      image: productImage,
+      stockQuantity: product.stockQuantity,
+      quantity: quantity,
+    });
+
+    setAddToCartSuccess(true);
+    setTimeout(() => setAddToCartSuccess(false), 3000);
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    // In a real app, you would redirect to checkout
+    // For now, we'll just add to cart
+  };
+
   return (
     <div className="min-h-screen font-sans text-gray-800 bg-white">
       <Header />
@@ -154,9 +187,8 @@ export default function ProductDetailPage() {
                     <button
                       key={`${img}-${idx}`}
                       onClick={() => setSelectedImageIndex(idx)}
-                      className={`w-20 h-20 rounded-lg overflow-hidden border ${
-                        idx === selectedImageIndex ? 'border-[#0f172a]' : 'border-gray-200'
-                      }`}
+                      className={`w-20 h-20 rounded-lg overflow-hidden border ${idx === selectedImageIndex ? 'border-[#0f172a]' : 'border-gray-200'
+                        }`}
                     >
                       <Image src={img} alt={`img-${idx}`} width={80} height={80} className="object-cover" />
                     </button>
@@ -207,17 +239,29 @@ export default function ProductDetailPage() {
 
                 <div className="flex items-center gap-3">
                   <button
-                    className="border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300"
-                    onClick={() => alert(`Thêm ${quantity} vào giỏ (mock)`)}
+                    className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''
+                      }`}
+                    onClick={handleAddToCart}
+                    disabled={!product || (product.stockQuantity !== undefined && product.stockQuantity <= 0)}
                   >
-                    Thêm vào giỏ
+                    {addToCartSuccess ? (
+                      <span className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Đã thêm!
+                      </span>
+                    ) : (
+                      'Thêm vào giỏ'
+                    )}
                   </button>
-                  <button
-                    className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => alert(`Mua ${quantity} (mock)`)}
+                  <Link
+                    href="/cart"
+                    className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
+                    onClick={handleBuyNow}
                   >
                     Mua ngay
-                  </button>
+                  </Link>
                 </div>
               </div>
 

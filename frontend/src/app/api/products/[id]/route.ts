@@ -1,32 +1,88 @@
 import { db } from "../../_lib/mockData";
 import { NextRequest, NextResponse } from "next/server";
 
+// Hàm hỗ trợ tìm sản phẩm và chỉ mục của nó trong mảng dữ liệu
+const findProduct = (id: number) => {
+  const productIndex = db.products.findIndex((p) => p.id === id);
+  if (productIndex === -1) {
+    return { product: null, productIndex: -1 };
+  }
+  return { product: db.products[productIndex], productIndex };
+};
+
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest
 ) {
   try {
-    const { id } = await params;
-    // Chuyển id từ URL (string) sang number để tìm trong mockData (id là number)
-    const productId = Number(id);
-
-    const product = db.products.find((p) => p.id === productId);
-
-    if (!product) {
-      return NextResponse.json(
-        { message: `Không tìm thấy sản phẩm với ID ${id}` },
-        { status: 404 }
-      );
+    // Lấy ID từ URL để tránh lỗi với các phiên bản Next.js mới
+    const pathname = new URL(request.url).pathname;
+    const segments = pathname.split('/');
+    const idString = segments[segments.length - 1];
+    const id = parseInt(idString, 10);
+    if (isNaN(id)) {
+      return NextResponse.json({ message: "ID sản phẩm không hợp lệ" }, { status: 400 });
     }
 
-    return NextResponse.json(product, { status: 200 });
+    const { product } = findProduct(id);
+
+    if (product) {
+      return NextResponse.json(product);
+    } else {
+      return NextResponse.json({ message: `Không tìm thấy sản phẩm với ID ${id}` }, { status: 404 });
+    }
   } catch (error) {
-    console.error("Get product detail error:", error);
-    return NextResponse.json(
-      { message: "Lỗi server khi lấy chi tiết sản phẩm" },
-      { status: 500 }
-    );
+    console.error(`Failed to fetch product:`, error);
+    return NextResponse.json({ message: "Lỗi khi lấy dữ liệu sản phẩm" }, { status: 500 });
   }
+}
+
+export async function PATCH(
+  request: NextRequest,
+) {
+  try {
+    const pathname = new URL(request.url).pathname;
+    const segments = pathname.split('/');
+    const idString = segments[segments.length - 1];
+    const id = parseInt(idString, 10);
+    if (isNaN(id)) {
+      return NextResponse.json({ message: "ID sản phẩm không hợp lệ" }, { status: 400 });
+    }
+
+    const { product, productIndex } = findProduct(id);
+
+    if (!product) {
+      return NextResponse.json({ message: `Không tìm thấy sản phẩm với ID ${id}` }, { status: 404 });
+    }
+
+    const body = await request.json();
+    // Cập nhật sản phẩm trong mảng dữ liệu mock
+    const updatedProduct = { ...product, ...body };
+    db.products[productIndex] = updatedProduct;
+
+    return NextResponse.json(updatedProduct);
+  } catch (error) {
+    console.error(`Failed to update product:`, error);
+    return NextResponse.json({ message: "Lỗi khi cập nhật sản phẩm" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest
+) {
+  const pathname = new URL(request.url).pathname;
+  const segments = pathname.split('/');
+  const idString = segments[segments.length - 1];
+  const id = parseInt(idString, 10);
+  const { product, productIndex } = findProduct(id);
+
+  if (!product) {
+    return NextResponse.json({ message: `Không tìm thấy sản phẩm với ID ${id}` }, { status: 404 });
+  }
+
+  // Xóa sản phẩm khỏi mảng dữ liệu mock
+  db.products.splice(productIndex, 1);
+
+  return new NextResponse(null, { status: 204 }); // 204 No Content: Xóa thành công, không có nội dung trả về
 }
 
 export async function DELETE(
