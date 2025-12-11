@@ -1,3 +1,5 @@
+import type { Order } from '@/types';
+
 const CATEGORIES_DATA = [
 	{ categoryId: 12345678, categoryName: 'Đồng hồ' },
 	{ categoryId: 27840013, categoryName: 'Hoa vĩnh cửu' },
@@ -1599,7 +1601,7 @@ const INITIAL_USERS: User[] = [
 const usersStore: User[] = [...INITIAL_USERS];
 
 // Orders storage
-const ordersStore: any[] = [];
+const ordersStore: Order[] = [];
 
 // Các hàm để thao tác với "cơ sở dữ liệu"
 export const db = {
@@ -1613,9 +1615,9 @@ export const db = {
   products: [...PRODUCTS_DATA],
   categories: [...CATEGORIES_DATA],
   orders: {
-    push: (order: any) => ordersStore.push(order),
-    find: (predicate: (order: any) => boolean) => ordersStore.find(predicate),
-    filter: (predicate: (order: any) => boolean) => ordersStore.filter(predicate),
-    findIndex: (predicate: (order: any) => boolean) => ordersStore.findIndex(predicate),
+    push: (order: Order) => ordersStore.push(order),
+    find: (predicate: (order: Order) => boolean) => ordersStore.find(predicate),
+    filter: (predicate: (order: Order) => boolean) => ordersStore.filter(predicate),
+    findIndex: (predicate: (order: Order) => boolean) => ordersStore.findIndex(predicate),
   },
 };
