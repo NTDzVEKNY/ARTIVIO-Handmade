@@ -57,3 +57,38 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Giả lập tạo ID mới (Lấy ID lớn nhất hiện tại + 1)
+    const newId = db.products.length > 0 ? Math.max(...db.products.map((p) => Number(p.id))) + 1 : 1;
+
+    // Tìm categoryName dựa trên categoryId gửi lên
+    const category = db.categories.find(c => c.categoryId === Number(body.categoryId));
+
+    const newProduct = {
+      ...body,
+      id: newId,
+      // Đảm bảo các trường bắt buộc có giá trị mặc định nếu thiếu
+      productName: body.productName || "Sản phẩm mới",
+      price: String(body.price),
+      image: body.image || "https://placehold.co/600x400?text=No+Image",
+      quantitySold: 0,
+      stockQuantity: Number(body.stockQuantity),
+      categoryId: Number(body.categoryId),
+      categoryName: category ? category.categoryName : 'Khác',
+      status: body.status || 'Đang bán',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Thêm vào đầu danh sách giả lập
+    db.products.unshift(newProduct as Product);
+
+    return NextResponse.json(newProduct, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create product:", error);
+    return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
+  }
+}

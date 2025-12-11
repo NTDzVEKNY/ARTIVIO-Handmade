@@ -1595,8 +1595,20 @@ const INITIAL_USERS: User[] = [
 
 // --- BỘ NHỚ TRUNG TÂM (IN-MEMORY DATABASE) ---
 
-// Tạo ra các bản sao có thể thay đổi được
-const usersStore: User[] = [...INITIAL_USERS];
+// Sử dụng biến global để lưu trữ dữ liệu trong quá trình development (tránh bị reset khi hot reload)
+const globalForMock = global as unknown as {
+  usersStore: User[] | undefined;
+  productsStore: typeof PRODUCTS_DATA | undefined;
+};
+
+// Tạo ra các bản sao có thể thay đổi được, ưu tiên lấy từ global nếu có
+const usersStore = globalForMock.usersStore || [...INITIAL_USERS];
+const productsStore = globalForMock.productsStore || [...PRODUCTS_DATA];
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForMock.usersStore = usersStore;
+  globalForMock.productsStore = productsStore;
+}
 
 // Các hàm để thao tác với "cơ sở dữ liệu"
 export const db = {
@@ -1607,6 +1619,6 @@ export const db = {
     findIndex: (predicate: (user: User) => boolean) => usersStore.findIndex(predicate),
     updatePassword: (index: number, newPass: string) => { usersStore[index].password = newPass; },
   },
-  products: [...PRODUCTS_DATA],
+  products: productsStore,
   categories: [...CATEGORIES_DATA],
 };
