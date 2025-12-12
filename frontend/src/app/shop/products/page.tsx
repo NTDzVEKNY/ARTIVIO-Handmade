@@ -31,21 +31,7 @@ const SORT_OPTIONS = [
   { id: 'price-desc', label: 'Giá giảm dần' },
 ];
 
-interface Product {
-  id: number;
-  productName: string;
-  categoryId: number;
-  categoryName: string;
-  price: string;
-  description: string;
-  image: string;
-  quantitySold?: number;
-}
-
-interface Category {
-  categoryId: number;
-  categoryName: string;
-}
+import { Product, Category } from '@/types';
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
@@ -67,29 +53,29 @@ function ProductsPageContent() {
 
   const filteredProducts = products
     .filter(product => {
-      const matchesCategory = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
+      const matchesCategory = selectedCategoryId === 'all' || product.category_id === selectedCategoryId;
       const matchesSearch = searchQuery === '' ||
-        product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase());
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const priceRange_ = PRICE_RANGES.find(r => r.id === priceRange);
-      const price = Number(product.price) || 0;
+      const price = product.price || 0;
       const matchesPrice = priceRange_ ? (price >= priceRange_.min && price <= priceRange_.max) : true;
 
       return matchesCategory && matchesSearch && matchesPrice;
     })
     .sort((a, b) => {
       if (sortBy === 'featured') {
-        const aSold = a.quantitySold || 0;
-        const bSold = b.quantitySold || 0;
+        const aSold = a.quantity_sold || 0;
+        const bSold = b.quantity_sold || 0;
         return bSold - aSold;
       } else if (sortBy === 'price-asc') {
-        const aPrice = Number(a.price) || 0;
-        const bPrice = Number(b.price) || 0;
+        const aPrice = a.price || 0;
+        const bPrice = b.price || 0;
         return aPrice - bPrice;
       } else if (sortBy === 'price-desc') {
-        const aPrice = Number(a.price) || 0;
-        const bPrice = Number(b.price) || 0;
+        const aPrice = a.price || 0;
+        const bPrice = b.price || 0;
         return bPrice - aPrice;
       }
       return 0;
@@ -132,7 +118,7 @@ function ProductsPageContent() {
     const currentId = categoryIdParam ? parseInt(categoryIdParam, 10) : 'all';
 
     if (currentId !== 'all' && !Number.isNaN(currentId)) {
-      const categoryExists = categories.some(c => c.categoryId === currentId);
+      const categoryExists = categories.some(c => c.id === currentId);
       setSelectedCategoryId(categoryExists ? currentId : 'all');
     } else {
       setSelectedCategoryId('all');
@@ -140,7 +126,7 @@ function ProductsPageContent() {
     setPage(0);
     const target = currentId === 'all' ? '/shop/products' : `/shop/products?categoryId=${currentId}&page=1`;
     router.replace(target);
-  }, [categoryIdParam, categories]);
+  }, [categoryIdParam, categories, router]);
 
   const totalItems = filteredProducts.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -220,28 +206,28 @@ function ProductsPageContent() {
       {/* Category Filter */}
       <div className="mb-10">
         <div className="flex flex-wrap gap-3 justify-center">
-          {[{ categoryId: 'all', categoryName: 'Tất cả' }, ...categories].map((category) => (
+          {[{ id: 'all', name: 'Tất cả' }, ...categories].map((category) => (
             <button
-              key={category.categoryId}
+              key={category.id}
               onClick={() => {
-                if (category.categoryId === 'all') {
+                if (category.id === 'all') {
                   router.push('/shop/products');
                 } else {
-                  router.push(`/shop/products?categoryId=${category.categoryId}&page=1`);
+                  router.push(`/shop/products?categoryId=${category.id}&page=1`);
                 }
-                setSelectedCategoryId(category.categoryId as number | 'all');
+                setSelectedCategoryId(category.id as number | 'all');
                 setPage(0);
               }}
               className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-sm border`}
               style={{
-                backgroundColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#F7F1E8',
-                color: selectedCategoryId === category.categoryId ? 'white' : '#3F2E23',
-                borderColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#D96C39'
+                backgroundColor: selectedCategoryId === category.id ? '#D96C39' : '#F7F1E8',
+                color: selectedCategoryId === category.id ? 'white' : '#3F2E23',
+                borderColor: selectedCategoryId === category.id ? '#D96C39' : '#D96C39'
               }}
             >
               <span className="flex items-center gap-3">
-                <span className="text-lg">{categoryIcons[String(category.categoryName)] ?? '🎁'}</span>
-                <span>{category.categoryName}</span>
+                <span className="text-lg">{categoryIcons[String(category.name)] ?? '🎁'}</span>
+                <span>{category.name}</span>
               </span>
             </button>
           ))}
@@ -320,56 +306,59 @@ function ProductsPageContent() {
           {pageItems.length > 0 ? (
             <div>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                {pageItems.map((product, idx) => (
-                  <Link
-                    key={product.id}
-                    href={`/shop/id/${product.id}`}
-                    className="group relative"
-                  >
-                    <div className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col" style={{
-                      backgroundColor: '#F7F1E8',
-                      borderColor: '#D96C39',
-                      border: '1px solid #E8D5B5',
-                      animation: `fadeInUp 0.5s ease-out ${idx * 0.05}s backwards`
-                    }}>
-                      {/* Image Container */}
-                      <div className="relative w-full h-48 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
-                        <Image
-                          src={product.image}
-                          alt={product.productName}
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                        {product.quantitySold && product.quantitySold > 0 && (
-                          <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
-                            ⭐ Bán chạy
-                          </div>
-                        )}
-                      </div>
+                {pageItems.map((product, idx) => {
+                  const categoryName = categories.find(c => c.id === product.category_id)?.name || 'Chưa phân loại';
+                  return (
+                    <Link
+                      key={product.id}
+                      href={`/shop/id/${product.id}`}
+                      className="group relative"
+                    >
+                      <div className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col" style={{
+                        backgroundColor: '#F7F1E8',
+                        borderColor: '#D96C39',
+                        border: '1px solid #E8D5B5',
+                        animation: `fadeInUp 0.5s ease-out ${idx * 0.05}s backwards`
+                      }}>
+                        {/* Image Container */}
+                        <div className="relative w-full h-48 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
+                          <Image
+                            src={product.image || '/artivio-logo.png'}
+                            alt={product.name}
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          {product.quantity_sold && product.quantity_sold > 0 && (
+                            <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
+                              ⭐ Bán chạy
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Content */}
-                      <div className="p-5 flex-1 flex flex-col">
-                        <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#D96C39' }}>
-                          {product.categoryName}
-                        </div>
-                        <h3 className="text-sm font-semibold mb-2 line-clamp-2 transition-colors" style={{ color: '#3F2E23' }}>
-                          {product.productName}
-                        </h3>
-                        <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
-                          {product.description}
-                        </p>
-                        <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #E8D5B5' }}>
-                          <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
-                            ₫{Number(product.price).toLocaleString("vi-VN")}
+                        {/* Content */}
+                        <div className="p-5 flex-1 flex flex-col">
+                          <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#D96C39' }}>
+                            {categoryName}
                           </div>
-                          <div className="text-xs text-white px-3 py-2 rounded-full font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110" style={{ backgroundColor: '#D96C39' }}>
-                            Xem →
+                          <h3 className="text-sm font-semibold mb-2 line-clamp-2 transition-colors" style={{ color: '#3F2E23' }}>
+                            {product.name}
+                          </h3>
+                          <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
+                            {product.description}
+                          </p>
+                          <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #E8D5B5' }}>
+                            <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
+                              ₫{product.price.toLocaleString("vi-VN")}
+                            </div>
+                            <div className="text-xs text-white px-3 py-2 rounded-full font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110" style={{ backgroundColor: '#D96C39' }}>
+                              Xem →
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  )
+                })}
               </div>
 
               {/* Pagination */}

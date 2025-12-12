@@ -3,11 +3,11 @@ import { Category } from '@/types';
 import { fetchApi } from './api';
 
 export interface ProductPayload {
-  productName: string;
+  name: string;
   price: number;
   description: string;
-  categoryId: number;
-  stockQuantity: number;
+  category_id: number;
+  stock_quantity: number;
   image: string;
   status?: string;
 }

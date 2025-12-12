@@ -4,35 +4,41 @@ import { useState, useEffect } from 'react';
 import Image from "next/image";
 import Link from "next/link";
 
-interface Product {
-  id: number;
-  productName: string;
-  price: string;
-  image: string;
-  description: string;
-  quantitySold?: number;
+import { Product } from '~/types';
+
+interface ProductWithCategory extends Product {
   categoryName?: string;
 }
 
 export default function FeaturedProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/products?size=0')
-      .then(res => res.json())
-      .then((data: Product[] | { content: Product[] }) => {
-        const productList = Array.isArray(data) ? data : (data.content ?? []);
-        const normalized = Array.isArray(productList) ? productList : [];
-        normalized.sort((a, b) => (Number(b.quantitySold ?? 0) - Number(a.quantitySold ?? 0)));
-        setProducts(normalized.slice(0, 8));
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch featured products:", err);
-        setProducts([]);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch('/api/products?size=0').then(res => res.json()),
+      fetch('/api/categories').then(res => res.json())
+    ])
+    .then(([productsData, categoriesData]) => {
+      const productList = Array.isArray(productsData) ? productsData : (productsData.content ?? []);
+      const normalized = Array.isArray(productList) ? productList : [];
+      
+      const categoryMap = new Map(categoriesData.map((cat: any) => [cat.id, cat.name]));
+
+      const productsWithCategory = normalized.map(product => ({
+        ...product,
+        categoryName: categoryMap.get(product.category_id)
+      }));
+
+      productsWithCategory.sort((a, b) => (Number(b.quantity_sold ?? 0) - Number(a.quantity_sold ?? 0)));
+      setProducts(productsWithCategory.slice(0, 8));
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error("Failed to fetch featured products:", err);
+      setProducts([]);
+      setLoading(false);
+    });
   }, []);
 
   return (
@@ -67,12 +73,12 @@ export default function FeaturedProducts() {
               }}>
                 <div className="relative w-full h-44 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
                   <Image
-                    src={product.image}
-                    alt={product.productName}
+                    src={product.image || 'https://placehold.co/600x400?text=No+Image'}
+                    alt={product.name}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  {product.quantitySold && product.quantitySold > 0 && (
+                  {product.quantity_sold && product.quantity_sold > 0 && (
                     <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
                       ⭐ Bán chạy
                     </div>
@@ -84,14 +90,14 @@ export default function FeaturedProducts() {
                     {product.categoryName ?? ''}
                   </div>
                   <h3 className="text-sm font-semibold mb-2 line-clamp-2 group-hover:font-bold transition-all" style={{ color: '#3F2E23' }}>
-                    {product.productName}
+                    {product.name}
                   </h3>
                   <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
                     {product.description}
                   </p>
                   <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #E8D5B5' }}>
                     <div className="text-lg font-bold" style={{ color: '#D96C39' }}>
-                      ₫{Number(product.price).toLocaleString("vi-VN")}
+                      ₫{product.price.toLocaleString("vi-VN")}
                     </div>
                     <div className="text-xs text-white px-3 py-2 rounded-full font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110" style={{ backgroundColor: '#D96C39' }}>
                       Xem →

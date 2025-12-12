@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Edit, Trash, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product, Category } from '@/types';
@@ -73,10 +74,10 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
   const filteredProducts = useMemo(() => {
     return data
       .filter(product => {
-        const matchesCategory = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
+        const matchesCategory = selectedCategoryId === 'all' || product.category_id === selectedCategoryId;
         
         const matchesSearch = searchQuery === '' ||
-          product.productName.toLowerCase().includes(searchQuery.toLowerCase());
+          product.name.toLowerCase().includes(searchQuery.toLowerCase());
 
         const priceRange_ = PRICE_RANGES.find(r => r.id === priceRange);
         const price = Number(product.price) || 0;
@@ -91,12 +92,12 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
           case 'price-desc':
             return (Number(b.price) || 0) - (Number(a.price) || 0);
           case 'name-asc':
-            return a.productName.localeCompare(b.productName);
+            return a.name.localeCompare(b.name);
           case 'name-desc':
-            return b.productName.localeCompare(a.productName);
+            return b.name.localeCompare(a.name);
           case 'featured':
           default:
-            return (b.quantitySold || 0) - (a.quantitySold || 0);
+            return (b.quantity_sold || 0) - (a.quantity_sold || 0);
         }
       });
   }, [data, searchQuery, selectedCategoryId, priceRange, sortBy]);
@@ -105,8 +106,8 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
     if (selectedCategoryId === 'all') {
       return `Tất cả sản phẩm (${filteredProducts.length})`;
     }
-    const category = categories.find(c => c.categoryId === selectedCategoryId);
-    const categoryName = category ? category.categoryName : 'Sản phẩm';
+    const category = categories.find(c => c.id === selectedCategoryId);
+    const categoryName = category ? category.name : 'Sản phẩm';
     return `${categoryName} (${filteredProducts.length})`;
   }, [selectedCategoryId, categories, filteredProducts.length]);
 
@@ -150,7 +151,7 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
     );
   };
 
-  const handleDeleteProduct = (productId: number, productName: string) => {
+  const handleDeleteProduct = useCallback((productId: number, productName: string) => {
     confirmDeleteAction(productName, async () => {
         try {
             await fetchApi(`/products/${productId}`, { method: 'DELETE' });
@@ -161,23 +162,34 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
             toast.error(`Xóa sản phẩm "${productName}" thất bại.`);
         }
     });
-  };
+  }, [router]);
 
   const columns: ColumnDef<Product>[] = useMemo(() => [
     {
-      header: 'Sản phẩm',
+      id: 'product',
+      header: () => <div style={{ width: '200px', minWidth: '300px' }}>Sản phẩm</div>,
       cell: ({ row }) => {
         const product = row.original;
         return (
-          <div className="flex items-center gap-4 font-medium whitespace-nowrap" style={{ color: '#3F2E23' }}>
-            <Image src={product.image} alt={product.productName} width={48} height={48} className="rounded-md object-cover" />
-            <span className="font-bold">{product.productName}</span>
+          <div className="flex items-center gap-4 font-medium" style={{ color: '#3F2E23' }}>
+            <div className="flex-shrink-0">
+              <Image src={product.image || '/artivio-logo.png'} alt={product.name} width={48} height={48} className="rounded-md object-cover" />
+            </div>
+            <span className="font-bold">{product.name}</span>
           </div>
         );
       }
     },
+    {
+      id: 'category',
+      header: 'Danh mục',
+      cell: ({ row }) => {
+        const category = categories.find(c => c.id === row.original.category_id);
+        return <span className="text-sm" style={{ color: '#6B4F3E' }}>{category?.name || '---'}</span>;
+      }
+    },
     { accessorKey: 'price', header: 'Giá', cell: ({ row }) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(row.original.price) },
-    { accessorKey: 'stockQuantity', header: 'Tồn kho' },
+    { accessorKey: 'stock_quantity', header: 'Tồn kho' },
     { accessorKey: 'status', header: 'Trạng thái', cell: ({ row }) => (
         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ row.original.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }`}>
           {row.original.status === 'ACTIVE' ? 'Hoạt động' : 'Bị ẩn'}
@@ -202,13 +214,13 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                handleDeleteProduct(product.id, product.productName);
+                handleDeleteProduct(product.id, product.name);
               }} className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors" title="Xóa sản phẩm"><Trash className="h-4 w-4" /></button>
           </div>
         );
       }
     }
-  ], [router]);
+  ], [router, categories, handleDeleteProduct]);
 
   return (
     <div className="space-y-8">
@@ -284,16 +296,16 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
                     </button>
                     {categories.map((category) => (
                         <button
-                            key={category.categoryId}
-                            onClick={() => setSelectedCategoryId(category.categoryId)}
+                            key={category.id}
+                            onClick={() => setSelectedCategoryId(category.id)}
                             className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-sm border"
                             style={{
-                                backgroundColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#F7F1E8',
-                                color: selectedCategoryId === category.categoryId ? 'white' : '#3F2E23',
-                                borderColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#D96C39'
+                                backgroundColor: selectedCategoryId === category.id ? '#D96C39' : '#F7F1E8',
+                                color: selectedCategoryId === category.id ? 'white' : '#3F2E23',
+                                borderColor: selectedCategoryId === category.id ? '#D96C39' : '#D96C39'
                             }}
                         >
-                            {category.categoryName}
+                            {category.name}
                         </button>
                     ))}
                 </div>

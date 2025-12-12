@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -13,7 +14,7 @@ export const columns: ColumnDef<Product>[] = [
       <div className="relative h-10 w-10">
         <Image
           src={row.original.image || '/artivio-logo.png'} // Fallback image
-          alt={row.original.productName}
+          alt={row.original.name}
           fill
           className="rounded-md object-cover"
         />
@@ -21,7 +22,7 @@ export const columns: ColumnDef<Product>[] = [
     ),
   },
   {
-    accessorKey: 'productName',
+    accessorKey: 'name',
     header: 'Tên sản phẩm',
   },
   {
@@ -37,7 +38,7 @@ export const columns: ColumnDef<Product>[] = [
     },
   },
   {
-    accessorKey: 'stockQuantity',
+    accessorKey: 'stock_quantity',
     header: 'Tồn kho',
   },
   {
@@ -45,7 +46,7 @@ export const columns: ColumnDef<Product>[] = [
     header: 'Trạng thái',
   },
   {
-    accessorKey: 'categoryName',
+    accessorKey: 'category_id',
     header: 'Danh mục',
   },
   {

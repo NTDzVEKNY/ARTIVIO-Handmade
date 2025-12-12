@@ -5,8 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { createProduct } from '@/services/adminApi';
-import { getCategories } from '@/services/adminApi';
+import { fetchApi } from '@/services/api';
 import { Category } from '@/types';
 const NewProductPage = () => {
   const router = useRouter();
@@ -15,13 +14,13 @@ const NewProductPage = () => {
 
   // State quản lý dữ liệu form
   const [formData, setFormData] = useState({
-    productName: '',
+    name: '',
     price: '',
     description: '',
-    categoryId: '',
-    stockQuantity: '',
+    category_id: '',
+    stock_quantity: '',
     image: '',
-    status: 'Đang bán',
+    status: 'ACTIVE',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -35,7 +34,7 @@ const NewProductPage = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const categoriesData = await getCategories();
+      const categoriesData = await fetchApi<Category[]>('/categories');
       setCategories(categoriesData);
     };
 
@@ -46,16 +45,41 @@ const NewProductPage = () => {
     e.preventDefault();
     setLoading(true);
 
+    // --- VALIDATION ---
+    if (!formData.name.trim()) {
+      toast.error('Vui lòng nhập tên sản phẩm');
+      setLoading(false);
+      return;
+    }
+    if (!formData.category_id) {
+      toast.error('Vui lòng chọn danh mục sản phẩm');
+      setLoading(false);
+      return;
+    }
+    if (!formData.price || Number(formData.price) < 0) {
+      toast.error('Giá sản phẩm không hợp lệ (phải >= 0)');
+      setLoading(false);
+      return;
+    }
+    if (!formData.stock_quantity || Number(formData.stock_quantity) < 0) {
+      toast.error('Số lượng tồn kho không hợp lệ (phải >= 0)');
+      setLoading(false);
+      return;
+    }
+
     try {
       // Chuyển đổi giá và số lượng sang kiểu số trước khi gửi
       const payload = {
         ...formData,
-        categoryId: Number(formData.categoryId),
+        category_id: Number(formData.category_id),
         price: Number(formData.price) || 0,
-        stockQuantity: Number(formData.stockQuantity) || 0,
+        stock_quantity: Number(formData.stock_quantity) || 0,
       };
 
-      await createProduct(payload);
+      await fetchApi('/products', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
       toast.success('Tạo sản phẩm mới thành công!');
       router.push('/admin/products');
     } catch (error) {
@@ -118,8 +142,8 @@ const NewProductPage = () => {
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#3F2E23' }}>Tên sản phẩm</label>
                 <input
-                  name="productName"
-                  value={formData.productName}
+                  name="name"
+                  value={formData.name}
                   onChange={handleChange}
                   placeholder="Ví dụ: Túi tote vải canvas..."
                   className="w-full px-3 py-2 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#3F2E23]/20 transition-all"
@@ -130,18 +154,32 @@ const NewProductPage = () => {
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#3F2E23' }}>Danh mục</label>
                 <select
-                  name="categoryId"
-                  value={formData.categoryId}
+                  name="category_id"
+                  value={formData.category_id}
                   onChange={handleChange}
                   className="w-full px-3 py-2 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#3F2E23]/20 transition-all"
                   style={{ borderColor: '#E8D5B5', color: '#3F2E23' }}
                 >
                   <option value="">Chọn danh mục...</option>
                   {categories.map((cat) => (
-                    <option key={cat.categoryId} value={cat.categoryId}>
-                      {cat.categoryName}
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: '#3F2E23' }}>Trạng thái</label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#3F2E23]/20 transition-all"
+                  style={{ borderColor: '#E8D5B5', color: '#3F2E23' }}
+                >
+                  <option value="ACTIVE">Hoạt động</option>
+                  <option value="HIDDEN">Ẩn</option>
                 </select>
               </div>
 
@@ -161,9 +199,9 @@ const NewProductPage = () => {
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: '#3F2E23' }}>Số lượng tồn kho</label>
                   <input
-                    name="stockQuantity"
+                    name="stock_quantity"
                     type="number"
-                    value={formData.stockQuantity}
+                    value={formData.stock_quantity}
                     onChange={handleChange}
                     placeholder="0"
                     className="w-full px-3 py-2 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#3F2E23]/20 transition-all"

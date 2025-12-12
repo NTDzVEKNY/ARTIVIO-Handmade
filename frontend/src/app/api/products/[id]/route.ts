@@ -11,14 +11,11 @@ const findProduct = (id: number) => {
 };
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    // Lấy ID từ URL để tránh lỗi với các phiên bản Next.js mới
-    const pathname = new URL(request.url).pathname;
-    const segments = pathname.split('/');
-    const idString = segments[segments.length - 1];
-    const id = parseInt(idString, 10);
+    const id = parseInt(params.id, 10);
     if (isNaN(id)) {
       return NextResponse.json({ message: "ID sản phẩm không hợp lệ" }, { status: 400 });
     }
@@ -26,7 +23,12 @@ export async function GET(
     const { product } = findProduct(id);
 
     if (product) {
-      return NextResponse.json(product);
+      const category = db.categories.find(c => c.id === product.category_id);
+      const productWithCategory = {
+        ...product,
+        categoryName: category ? category.name : null,
+      };
+      return NextResponse.json(productWithCategory);
     } else {
       return NextResponse.json({ message: `Không tìm thấy sản phẩm với ID ${id}` }, { status: 404 });
     }
@@ -83,26 +85,4 @@ export async function DELETE(
   db.products.splice(productIndex, 1);
 
   return new NextResponse(null, { status: 204 }); // 204 No Content: Xóa thành công, không có nội dung trả về
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const productId = Number(id);
-
-    const index = db.products.findIndex((p) => p.id === productId);
-
-    if (index === -1) {
-      return NextResponse.json({ message: `Không tìm thấy sản phẩm` }, { status: 404 });
-    }
-
-    db.products.splice(index, 1);
-
-    return NextResponse.json({ message: "Xóa sản phẩm thành công" }, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ message: "Lỗi server" }, { status: 500 });
-  }
 }

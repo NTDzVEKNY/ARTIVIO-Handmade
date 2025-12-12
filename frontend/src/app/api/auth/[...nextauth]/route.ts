@@ -59,7 +59,8 @@ const handler = NextAuth({
           // Người dùng social login không có mật khẩu
           password: '', 
           role: 'USER' as const,
-          createdAt: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         };
         db.users.push(newUser);
       }

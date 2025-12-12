@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -6,7 +7,7 @@ import { Product, Category } from '@/types';
 import { fetchApi } from '@/services/api';
 import Image from 'next/image';
 import toast, { Toast } from 'react-hot-toast';
-import { ArrowLeft, Trash, Save, XCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Trash, Save, XCircle, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 
 const ProductDetailPage = () => {
   const router = useRouter();
@@ -86,7 +87,7 @@ const ProductDetailPage = () => {
     const { name, value } = e.target;
     setFormData(prev => {
         if (!prev) return null;
-        const newValue = ['price', 'stockQuantity', 'categoryId'].includes(name) ? Number(value) : value;
+        const newValue = ['price', 'stock_quantity', 'category_id'].includes(name) ? Number(value) : value;
         return { ...prev, [name]: newValue };
     });
   };
@@ -158,6 +159,38 @@ const ProductDetailPage = () => {
   const handleUpdate = async () => {
     if (!formData || !isDirty) return;
 
+    // --- VALIDATION ---
+    if (!formData.name.trim()) {
+      toast.error('Tên sản phẩm không được để trống');
+      return;
+    }
+    if (!formData.category_id) {
+      toast.error('Vui lòng chọn danh mục');
+      return;
+    }
+    if (formData.price < 0) {
+      toast.error('Giá sản phẩm không được âm');
+      return;
+    }
+    if (formData.stock_quantity < 0) {
+      toast.error('Số lượng tồn kho không được âm');
+      return;
+    }
+    if (!Number.isInteger(formData.stock_quantity)) {
+      toast.error('Số lượng tồn kho phải là số nguyên');
+      return;
+    }
+    if (!formData.image?.trim()) {
+      toast.error('Vui lòng nhập đường dẫn hình ảnh');
+      return;
+    }
+    try {
+      new URL(formData.image);
+    } catch {
+      toast.error('Đường dẫn hình ảnh không hợp lệ (phải bắt đầu bằng http/https)');
+      return;
+    }
+
     setIsUpdating(true);
     try {
       const updatedProduct = await fetchApi<Product>(`/products/${formData.id}`, {
@@ -180,7 +213,7 @@ const ProductDetailPage = () => {
 
   const handleDelete = async () => {
     if (!product) return;
-    confirmDeleteAction(product.productName, async () => {
+    confirmDeleteAction(product.name, async () => {
       try {
           await fetchApi(`/products/${product.id}`, { method: 'DELETE' });
           toast.success('Xóa sản phẩm thành công.');
@@ -200,7 +233,7 @@ const ProductDetailPage = () => {
   const handleBackNavigation = () => {
     if (isDirty) {
       confirmAction(
-        <span>Các thay đổi cho sản phẩm <strong className="font-semibold">&quot;{formData?.productName}&quot;</strong> sẽ không được lưu. Bạn có chắc chắn muốn quay lại?</span>,
+        <span>Các thay đổi cho sản phẩm <strong className="font-semibold">&quot;{formData?.name}&quot;</strong> sẽ không được lưu. Bạn có chắc chắn muốn quay lại?</span>,
         () => {
           router.push('/admin/products');
         }
@@ -225,20 +258,27 @@ const ProductDetailPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Image */}
           <div className="md:col-span-1 flex flex-col">
-            <div className="relative w-full h-80 rounded-lg overflow-hidden shadow-inner">
-              <Image
-                src={formData.image}
-                alt={formData.productName}
-                fill
-                className="object-cover"
-              />
+            <div className="relative w-full h-80 rounded-lg overflow-hidden shadow-inner bg-[#F7F1E8] flex items-center justify-center border border-[#E8D5B5]">
+              {formData.image ? (
+                <Image
+                  src={formData.image}
+                  alt={formData.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-[#6B4F3E] opacity-50">
+                  <ImageIcon className="w-16 h-16 mb-2" />
+                  <span className="font-medium">Chưa có hình ảnh</span>
+                </div>
+              )}
             </div>
             <div className="mt-4">
                 <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>URL Hình ảnh</div>
                 <input
                   type="text"
                   name="image"
-                  value={formData.image}
+                  value={formData.image || ''}
                   onChange={handleFormChange}
                   className="w-full text-sm bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none"
                   style={{ color: '#3F2E23' }}
@@ -253,8 +293,8 @@ const ProductDetailPage = () => {
                   <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Tên sản phẩm</div>
                   <textarea
                     ref={productNameRef}
-                    name="productName"
-                    value={formData.productName}
+                    name="name"
+                    value={formData.name}
                     onChange={handleFormChange}
                     className="w-full text-2xl font-bold bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none resize-none overflow-hidden"
                     style={{ color: '#3F2E23' }}
@@ -264,15 +304,15 @@ const ProductDetailPage = () => {
               <div>
                   <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Danh mục</div>
                   <select
-                    name="categoryId"
-                    value={formData.categoryId}
+                    name="category_id"
+                    value={formData.category_id || ''}
                     onChange={handleFormChange}
                     className="w-full font-semibold bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none pb-2 text-lg"
                     style={{ color: '#3F2E23' }}
                   >
                     {categories.map((category, index) => (
-                      <option key={`${category.categoryId}-${index}`} value={category.categoryId}>
-                        {category.categoryName}
+                      <option key={`${category.id}-${index}`} value={category.id}>
+                        {category.name}
                       </option>
                     ))}
                   </select>
@@ -284,7 +324,7 @@ const ProductDetailPage = () => {
                 <textarea
                   ref={descriptionRef}
                   name="description"
-                  value={formData.description}
+                  value={formData.description || ''}
                   onChange={handleFormChange}
                   className="w-full text-lg bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none resize-none overflow-hidden"
                   style={{ color: '#6B4F3E' }}
@@ -320,8 +360,8 @@ const ProductDetailPage = () => {
                     <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Số lượng tồn kho</div>
                     <input
                       type="number"
-                      name="stockQuantity"
-                      value={formData.stockQuantity}
+                      name="stock_quantity"
+                      value={formData.stock_quantity}
                       onChange={handleFormChange}
                       className="w-full font-semibold bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none"
                       style={{ color: '#3F2E23' }}
@@ -329,7 +369,7 @@ const ProductDetailPage = () => {
                 </div>
                 <div>
                     <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Đã bán</div>
-                    <div className="font-semibold" style={{color: '#3F2E23'}}>{formData.quantitySold || 0}</div>
+                    <div className="font-semibold" style={{color: '#3F2E23'}}>{formData.quantity_sold || 0}</div>
                 </div>
             </div>
           </div>
