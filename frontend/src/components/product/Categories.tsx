@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 
-interface Category {
-  categoryId: number;
-  categoryName: string;
+import { Category, Product } from '~/types';
+
+interface EnrichedCategory extends Category {
   soldCount?: number;
 }
 
@@ -21,39 +21,33 @@ const categoryIcons: { [key: string]: string } = {
 };
 
 export default function Categories() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<EnrichedCategory[]>([]);
 
   useEffect(() => {
     Promise.all([fetch('/api/categories'), fetch('/api/products?size=0')])
       .then(async ([cRes, pRes]) => {
-        type CatRes = { categoryId: number; categoryName: string };
-        type ProdRes = { categoryId?: number | string; quantitySold?: number | string; sold?: number | string };
-
         const catsRaw = await cRes.json();
         const productsRaw = await pRes.json();
 
-        const cats: CatRes[] = Array.isArray(catsRaw) ? catsRaw as CatRes[] : [];
+        const cats: Category[] = Array.isArray(catsRaw) ? catsRaw : [];
 
-        let products: ProdRes[] = [];
-        if (Array.isArray(productsRaw)) {
-          products = productsRaw as ProdRes[];
-        } else if (productsRaw && typeof productsRaw === 'object' && 'content' in productsRaw && Array.isArray((productsRaw as { content?: unknown }).content)) {
-          products = (productsRaw as { content: ProdRes[] }).content;
-        } else {
-          products = [];
+        let products: Product[] = [];
+        if (productsRaw && typeof productsRaw === 'object' && 'content' in productsRaw && Array.isArray((productsRaw as any).content)) {
+          products = (productsRaw as any).content;
         }
 
         const soldMap = new Map<number, number>();
         for (const p of products) {
-          const cid = typeof p.categoryId === 'number' ? p.categoryId : Number(p.categoryId ?? 0);
-          const sold = Number(p.quantitySold ?? p.sold ?? 0) || 0;
-          soldMap.set(cid, (soldMap.get(cid) ?? 0) + sold);
+          const cid = p.category_id;
+          if (cid !== null) {
+            const sold = p.quantity_sold || 0;
+            soldMap.set(cid, (soldMap.get(cid) ?? 0) + sold);
+          }
         }
 
-        const enriched: Category[] = cats.map((c) => ({
-          categoryId: c.categoryId,
-          categoryName: c.categoryName,
-          soldCount: soldMap.get(Number(c.categoryId)) ?? 0,
+        const enriched: EnrichedCategory[] = cats.map((c) => ({
+          ...c,
+          soldCount: soldMap.get(c.id) ?? 0,
         }));
 
         enriched.sort((a, b) => (b.soldCount ?? 0) - (a.soldCount ?? 0));
@@ -75,19 +69,19 @@ export default function Categories() {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-6">
         {categories.map((category) => (
           <Link 
-            key={category.categoryId} 
-            href={`/shop/products?categoryId=${category.categoryId}`}
+            key={category.id} 
+            href={`/shop/products?categoryId=${category.id}`}
             className="group relative block"
           >
             <div className="absolute inset-0 rounded-2xl transform group-hover:scale-105 transition-transform duration-300 -z-10" style={{ backgroundColor: 'rgba(217, 108, 57, 0.08)' }}></div>
             
             <div className="rounded-2xl shadow-sm p-6 flex flex-col items-center text-center transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-2" style={{ backgroundColor: '#F7F1E8' }}>
               <div className="w-24 h-24 rounded-full mb-4 flex items-center justify-center text-4xl transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" style={{ backgroundColor: '#F4C27A', opacity: 0.6 }}>
-                {categoryIcons[category.categoryName] || '🎁'}
+                {categoryIcons[category.name] || '🎁'}
               </div>
 
               <h3 className="text-lg font-semibold group-hover:font-bold transition-all duration-300" style={{ color: '#3F2E23' }}>
-                {category.categoryName}
+                {category.name}
               </h3>
 
               <div className="text-sm mt-2" style={{ color: '#6B4F3E' }}>

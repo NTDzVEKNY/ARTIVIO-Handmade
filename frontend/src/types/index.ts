@@ -1,19 +1,25 @@
 export type Product = {
 	id: number;
-	productName: string;
+	artisan_id: number;
+	category_id: number | null;
+	name: string;
+	description: string | null;
 	price: number;
-	quantitySold: number;
-	stockQuantity: number;
-	image: string;
-	status: string;
-	description: string;
-  categoryId: number;
-  categoryName: string;
+	image: string | null;
+	status: 'ACTIVE' | 'HIDDEN';
+	quantity_sold: number;
+	stock_quantity: number;
+	created_at: string;
+	updated_at: string;
 };
 
 export type Category = {
-  categoryId: number;
-  categoryName: string;
+	id: number;
+	name: string;
+	slug: string;
+	parent_id: number | null;
+	created_at: string;
+	updated_at: string;
 };
 
 export type CartItem = {
@@ -36,23 +42,20 @@ export type ShippingAddress = {
 export type PaymentMethod = 'cod' | 'bank_transfer' | 'credit_card';
 
 export type OrderItem = {
-  productId: number;
-  productName: string;
-  price: number;
-  quantity: number;
-  image?: string;
+	id: number;
+	order_id: number;
+	product_id: number | null;
+	quantity: number;
+	price_order: number; // Giá tại thời điểm mua
 };
 
 export type Order = {
-  id: number;
-  userId?: number;
-  items: OrderItem[];
-  shippingAddress: ShippingAddress;
-  paymentMethod: PaymentMethod;
-  subtotal: number;
-  shippingFee: number;
-  total: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  createdAt: string;
-  orderNumber: string;
+	id: number;
+	customer_id: number;
+	artisan_id: number;
+	chat_id: number | null;
+	total_price: number;
+	status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+	created_at: string;
+	updated_at: string;
 };

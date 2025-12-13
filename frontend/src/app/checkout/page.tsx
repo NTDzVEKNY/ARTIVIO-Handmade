@@ -10,91 +10,28 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { ShippingAddress, PaymentMethod } from '@/types';
 import { fetchApi } from '@/services/api';
-import { useToast } from '@/components/ui/toast';
-
-const SHIPPING_ADDRESS_STORAGE_KEY = 'artivio_shipping_address';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, getTotalPrice, clearCart } = useCart();
-  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [stockWarnings, setStockWarnings] = useState<Record<number, string>>({});
-  const [isValidatingStock, setIsValidatingStock] = useState(false);
 
-  // Load saved shipping address from localStorage
-  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(SHIPPING_ADDRESS_STORAGE_KEY);
-        if (saved) {
-          return JSON.parse(saved);
-        }
-      } catch (error) {
-        console.error('Failed to load saved shipping address:', error);
-      }
-    }
-    return {
-      fullName: '',
-      phone: '',
-      email: '',
-      address: '',
-      note: '',
-    };
+  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
+    fullName: '',
+    phone: '',
+    email: '',
+    address: '',
+    note: '',
   });
 
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
 
   const subtotal = getTotalPrice();
   const shippingFee = subtotal >= 500000 ? 0 : 30000;
   const total = subtotal + shippingFee;
-
-  // Save shipping address to localStorage whenever it changes
-  useEffect(() => {
-    if (shippingAddress.fullName || shippingAddress.phone || shippingAddress.email || shippingAddress.address) {
-      try {
-        localStorage.setItem(SHIPPING_ADDRESS_STORAGE_KEY, JSON.stringify(shippingAddress));
-      } catch (error) {
-        console.error('Failed to save shipping address:', error);
-      }
-    }
-  }, [shippingAddress]);
-
-  // Validate stock availability
-  useEffect(() => {
-    const validateStock = async () => {
-      if (items.length === 0) return;
-
-      setIsValidatingStock(true);
-      const warnings: Record<number, string> = {};
-
-      try {
-        await Promise.all(
-          items.map(async (item) => {
-            try {
-              const product = await fetchApi<{ stockQuantity: number; productName: string }>(
-                `/products/${item.id}`
-              );
-              if (product.stockQuantity < item.quantity) {
-                warnings[item.id] = `Chỉ còn ${product.stockQuantity} sản phẩm trong kho`;
-              } else if (product.stockQuantity < item.quantity + 3) {
-                warnings[item.id] = `Còn ${product.stockQuantity} sản phẩm - Sắp hết hàng`;
-              }
-            } catch (error) {
-              console.error(`Failed to validate stock for product ${item.id}:`, error);
-            }
-          })
-        );
-      } finally {
-        setStockWarnings(warnings);
-        setIsValidatingStock(false);
-      }
-    };
-
-    validateStock();
-  }, [items]);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -107,44 +44,25 @@ export default function CheckoutPage() {
 
     if (!shippingAddress.fullName.trim()) {
       newErrors.fullName = 'Vui lòng nhập họ và tên';
-    } else if (shippingAddress.fullName.trim().length < 2) {
-      newErrors.fullName = 'Họ và tên phải có ít nhất 2 ký tự';
     }
 
     if (!shippingAddress.phone.trim()) {
       newErrors.phone = 'Vui lòng nhập số điện thoại';
-    } else {
-      const cleanedPhone = shippingAddress.phone.replace(/\s/g, '');
-      if (!/^[0-9]{10,11}$/.test(cleanedPhone)) {
-        newErrors.phone = 'Số điện thoại phải có 10-11 chữ số';
-      }
+    } else if (!/^[0-9]{10,11}$/.test(shippingAddress.phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'Số điện thoại không hợp lệ';
     }
 
     if (!shippingAddress.email.trim()) {
       newErrors.email = 'Vui lòng nhập email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingAddress.email)) {
-      newErrors.email = 'Email không hợp lệ (ví dụ: email@example.com)';
+      newErrors.email = 'Email không hợp lệ';
     }
 
     if (!shippingAddress.address.trim()) {
       newErrors.address = 'Vui lòng nhập địa chỉ';
-    } else if (shippingAddress.address.trim().length < 10) {
-      newErrors.address = 'Địa chỉ phải có ít nhất 10 ký tự';
     }
 
     setErrors(newErrors);
-    
-    // Scroll to first error
-    if (Object.keys(newErrors).length > 0) {
-      const firstErrorField = Object.keys(newErrors)[0];
-      const element = document.getElementById(firstErrorField);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.focus();
-      }
-      showToast('Vui lòng kiểm tra lại thông tin đã nhập', 'error');
-    }
-    
     return Object.keys(newErrors).length === 0;
   };
 
@@ -155,24 +73,11 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Check for stock warnings
-    if (Object.keys(stockWarnings).length > 0) {
-      const hasCriticalWarnings = items.some((item) => {
-        const warning = stockWarnings[item.id];
-        return warning && warning.includes('Chỉ còn');
-      });
-
-      if (hasCriticalWarnings) {
-        showToast('Một số sản phẩm không đủ số lượng trong kho. Vui lòng kiểm tra lại giỏ hàng.', 'warning', 5000);
-        return;
-      }
-    }
-
     setIsSubmitting(true);
 
     try {
       const orderItems = items.map((item) => ({
-        productId: item.id,
+        product_id: item.id,
         productName: item.productName,
         price: Number(item.price),
         quantity: item.quantity,
@@ -195,17 +100,9 @@ export default function CheckoutPage() {
 
       // Clear cart after successful order
       clearCart();
-      
-      // Clear saved shipping address
-      try {
-        localStorage.removeItem(SHIPPING_ADDRESS_STORAGE_KEY);
-      } catch (error) {
-        console.error('Failed to clear saved address:', error);
-      }
 
       // Show success notification
       setShowSuccessNotification(true);
-      showToast('Đặt hàng thành công! Đang chuyển đến trang xác nhận...', 'success');
 
       // Redirect to success page after a short delay
       setTimeout(() => {
@@ -214,7 +111,7 @@ export default function CheckoutPage() {
     } catch (error: unknown) {
       console.error('Order submission error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.';
-      showToast(errorMessage, 'error', 5000);
+      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -267,25 +164,6 @@ export default function CheckoutPage() {
 
       <main className="container mx-auto px-6 py-12">
         <div className="max-w-6xl mx-auto">
-          {/* Progress Indicator */}
-          <div className="mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <div className="flex items-center">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#0f172a] text-white font-semibold">
-                  1
-                </div>
-                <div className="w-24 h-1 bg-[#0f172a] mx-2"></div>
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-300 text-gray-600 font-semibold">
-                  2
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-center gap-16 text-sm">
-              <span className="font-semibold text-[#0f172a]">Thông tin đơn hàng</span>
-              <span className="text-gray-500">Xác nhận</span>
-            </div>
-          </div>
-          
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Thanh toán</h1>
 
           <form onSubmit={handleSubmit}>
@@ -382,11 +260,7 @@ export default function CheckoutPage() {
                   <h2 className="text-xl font-bold text-gray-900 mb-6">Phương thức thanh toán</h2>
 
                   <div className="space-y-4">
-                    <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      paymentMethod === 'cod' 
-                        ? 'border-[#0f172a] bg-gray-50 shadow-sm' 
-                        : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                    }`}>
+                    <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -401,11 +275,7 @@ export default function CheckoutPage() {
                       </div>
                     </label>
 
-                    <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      paymentMethod === 'bank_transfer' 
-                        ? 'border-[#0f172a] bg-gray-50 shadow-sm' 
-                        : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                    }`}>
+                    <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -420,11 +290,7 @@ export default function CheckoutPage() {
                       </div>
                     </label>
 
-                    <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      paymentMethod === 'credit_card' 
-                        ? 'border-[#0f172a] bg-gray-50 shadow-sm' 
-                        : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                    }`}>
+                    <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                       <input
                         type="radio"
                         name="paymentMethod"
@@ -449,11 +315,6 @@ export default function CheckoutPage() {
 
                   {/* Order Items */}
                   <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                    {isValidatingStock && (
-                      <div className="text-xs text-gray-500 text-center py-2">
-                        Đang kiểm tra tồn kho...
-                      </div>
-                    )}
                     {items.map((item) => (
                       <div key={item.id} className="flex gap-4">
                         <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
@@ -467,15 +328,6 @@ export default function CheckoutPage() {
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">{item.productName}</h3>
                           <p className="text-sm text-gray-600 mt-1">Số lượng: {item.quantity}</p>
-                          {stockWarnings[item.id] && (
-                            <p className={`text-xs mt-1 ${
-                              stockWarnings[item.id].includes('Chỉ còn') 
-                                ? 'text-red-600 font-semibold' 
-                                : 'text-yellow-600'
-                            }`}>
-                              ⚠️ {stockWarnings[item.id]}
-                            </p>
-                          )}
                           <p className="text-sm font-bold text-[#0f172a] mt-1">
                             ₫{(Number(item.price) * item.quantity).toLocaleString('vi-VN')}
                           </p>
@@ -513,22 +365,10 @@ export default function CheckoutPage() {
 
                   <Button
                     type="submit"
-                    disabled={isSubmitting || isValidatingStock || items.length === 0}
-                    className="w-full mt-6 bg-[#0f172a] text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
+                    className="w-full mt-6 bg-[#0f172a] text-white hover:bg-gray-800"
                   >
-                    {isSubmitting ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Đang xử lý...
-                      </span>
-                    ) : isValidatingStock ? (
-                      'Đang kiểm tra...'
-                    ) : (
-                      'Đặt hàng'
-                    )}
+                    {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng'}
                   </Button>
 
                   <div className="mt-6 pt-6 border-t text-sm text-gray-500">

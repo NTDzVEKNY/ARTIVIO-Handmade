@@ -1,40 +1,23 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
 import { useCart } from '@/contexts/CartContext';
-import type { Product as ProductImported } from '@/types';
-
-type Product = {
-  id?: number;
-  productName?: string;
-  name?: string;
-  price?: number | string;
-  image?: string | string[];
-  images?: string[];
-  description?: string;
-  stockQuantity?: number;
-  quantitySold?: number;
-  categoryId?: number | string;
-  categoryName?: string;
-};
-
-function isStringArray(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((i) => typeof i === 'string');
-}
+import type { Product, Category } from '@/types'; // Use the official Product type
+import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
 
 export default function ProductDetailPage() {
   const params = useParams();
   const productId = Number(params.id);
-  const { addItem, getItemQuantity } = useCart();
+  const { addItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [categoryName, setCategoryName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [addToCartSuccess, setAddToCartSuccess] = useState(false);
@@ -51,37 +34,26 @@ export default function ProductDetailPage() {
 
     fetch(`/api/products/${productId}`)
       .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<ProductImported | unknown>;
+        if (!res.ok) {
+          throw new Error(`Không tìm thấy sản phẩm (mã lỗi: ${res.status})`);
+        }
+        return res.json() as Promise<Product>;
       })
       .then((data) => {
-        // treat response as unknown and read fields with runtime guards (no `any`)
-        const raw = data as unknown as Record<string, unknown>;
-
-        const mapped: Product = {
-          id: typeof raw.id === 'number' ? (raw.id as number) : undefined,
-          productName:
-            typeof raw.productName === 'string' ? (raw.productName as string) : typeof raw.name === 'string' ? (raw.name as string) : undefined,
-          price: typeof raw.price === 'number' || typeof raw.price === 'string' ? (raw.price as number | string) : undefined,
-          images: isStringArray(raw.images) ? (raw.images as string[]) : undefined,
-          image:
-            typeof raw.image === 'string'
-              ? (raw.image as string)
-              : isStringArray(raw.image)
-                ? (raw.image as string[])
-                : undefined,
-          description: typeof raw.description === 'string' ? (raw.description as string) : undefined,
-          stockQuantity: typeof raw.stockQuantity === 'number' ? (raw.stockQuantity as number) : typeof raw.stock === 'number' ? (raw.stock as number) : undefined,
-          quantitySold: typeof raw.quantitySold === 'number' ? (raw.quantitySold as number) : undefined,
-          categoryId: typeof raw.categoryId === 'string' || typeof raw.categoryId === 'number' ? (raw.categoryId as number | string) : undefined,
-          categoryName: typeof raw.categoryName === 'string' ? (raw.categoryName as string) : undefined,
-        };
-
-        setProduct(mapped);
+        setProduct(data);
         setQuantity(1);
+        if (data.category_id) {
+          fetch('/api/categories')
+            .then((res) => res.json())
+            .then((cats: Category[]) => {
+              const cat = cats.find((c) => c.id === data.category_id);
+              if (cat) setCategoryName(cat.name);
+            })
+            .catch((err) => console.error('Failed to fetch categories', err));
+        }
       })
       .catch((err: unknown) => {
-        setError('Không tải được sản phẩm');
+        setError(err instanceof Error ? err.message : 'Không tải được sản phẩm');
         console.error(err);
       })
       .finally(() => setLoading(false));
@@ -89,7 +61,7 @@ export default function ProductDetailPage() {
 
   const increase = () =>
     setQuantity((q) => {
-      const max = product?.stockQuantity ?? 9999;
+      const max = product?.stock_quantity ?? 9999;
       return Math.min(max, q + 1);
     });
   const decrease = () => setQuantity((q) => Math.max(1, q - 1));
@@ -101,36 +73,20 @@ export default function ProductDetailPage() {
       return;
     }
     const min = 1;
-    const max = product?.stockQuantity ?? 9999;
+    const max = product?.stock_quantity ?? 9999;
     const clamped = Math.max(min, Math.min(max, Math.floor(parsed)));
     setQuantity(clamped);
   };
 
-  const images: string[] = useMemo(() => {
-    if (!product) return [];
-    if (Array.isArray(product.images) && product.images.length) return product.images;
-    if (Array.isArray(product.image) && product.image.length) return product.image as string[];
-    if (typeof product.image === 'string' && product.image) return [product.image];
-    return [];
-  }, [product]);
-
   const handleAddToCart = () => {
     if (!product || !product.id) return;
 
-    const productImage = Array.isArray(product.image)
-      ? product.image[0]
-      : typeof product.image === 'string'
-        ? product.image
-        : Array.isArray(product.images) && product.images.length > 0
-          ? product.images[0]
-          : '/hero-handmade.jpg';
-
     addItem({
       id: product.id,
-      productName: product.productName ?? product.name ?? 'Sản phẩm',
+      productName: product.name,
       price: String(product.price ?? 0),
-      image: productImage,
-      stockQuantity: product.stockQuantity,
+      image: product.image || '/hero-handmade.jpg',
+      stockQuantity: product.stock_quantity,
       quantity: quantity,
     });
 
@@ -141,7 +97,7 @@ export default function ProductDetailPage() {
   const handleBuyNow = () => {
     handleAddToCart();
     // In a real app, you would redirect to checkout
-    // For now, we'll just add to cart
+    // For now, we'll just add to cart which is handled by handleAddToCart
   };
 
   return (
@@ -168,103 +124,112 @@ export default function ProductDetailPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Image Section */}
             <div>
               <div className="relative rounded-2xl overflow-hidden shadow-lg">
                 <div className="w-full h-[420px] relative bg-gray-100">
                   <Image
-                    src={images[selectedImageIndex] ?? images[0] ?? (typeof product.image === 'string' ? product.image : '/hero-handmade.jpg')}
-                    alt={product.productName ?? product.name ?? 'Product'}
+                    src={product.image || '/hero-handmade.jpg'}
+                    alt={product.name ?? 'Product Image'}
                     fill
                     className="object-cover"
                     priority
                   />
+                  {isProductOutOfStock(product) && (
+                    <div className="absolute top-4 left-4 bg-red-600 text-white px-5 py-2.5 rounded-lg font-bold text-base shadow-lg z-10">
+                      Hết hàng
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {images.length > 1 && (
-                <div className="mt-4 flex gap-3">
-                  {images.map((img: string, idx: number) => (
-                    <button
-                      key={`${img}-${idx}`}
-                      onClick={() => setSelectedImageIndex(idx)}
-                      className={`w-20 h-20 rounded-lg overflow-hidden border ${idx === selectedImageIndex ? 'border-[#0f172a]' : 'border-gray-200'
-                        }`}
-                    >
-                      <Image src={img} alt={`img-${idx}`} width={80} height={80} className="object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
+            {/* Details Section */}
             <div className="space-y-6">
-              <h1 className="text-2xl font-bold text-gray-900">{product.productName ?? product.name}</h1>
-              <div className="text-xl font-extrabold text-[#0f172a]">
-                ₫{(Number(product.price) || 0).toLocaleString('vi-VN')}
+              <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
+              <div className="flex items-center gap-4">
+                <div className="text-xl font-extrabold text-[#0f172a]">
+                  ₫{(product.price || 0).toLocaleString('vi-VN')}
+                </div>
+                {isProductOutOfStock(product) && (
+                  <div className="px-4 py-1.5 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                    {getStockStatusText(product)}
+                  </div>
+                )}
               </div>
 
-              <div className="text-sm text-gray-600">{product.description}</div>
+              {product.description && (
+                <div className="text-sm text-gray-600">{product.description}</div>
+              )}
 
+              {/* Quantity and Actions */}
               <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center border rounded-full overflow-hidden">
+                <div className={`flex items-center border rounded-full overflow-hidden ${isProductOutOfStock(product) ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <button
                     onClick={decrease}
                     aria-label="Giảm số lượng"
                     className="px-4 py-2 bg-gray-100 disabled:opacity-50"
-                    disabled={quantity <= 1}
+                    disabled={quantity <= 1 || isProductOutOfStock(product)}
                   >
                     -
                   </button>
-
                   <input
                     type="number"
                     inputMode="numeric"
                     min={1}
-                    max={product.stockQuantity ?? 9999}
+                    max={product.stock_quantity ?? 9999}
                     value={quantity}
                     onChange={(e) => onQuantityChange(e.target.value)}
                     className="w-20 text-center px-3 py-2 outline-none appearance-none bg-white"
                     aria-label="Số lượng"
+                    disabled={isProductOutOfStock(product)}
                   />
-
                   <button
                     onClick={increase}
                     aria-label="Tăng số lượng"
                     className="px-4 py-2 bg-gray-100 disabled:opacity-50"
-                    disabled={quantity >= (product.stockQuantity ?? 9999)}
+                    disabled={quantity >= (product.stock_quantity ?? 9999) || isProductOutOfStock(product)}
                   >
                     +
                   </button>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button
-                    className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''
-                      }`}
-                    onClick={handleAddToCart}
-                    disabled={!product || (product.stockQuantity !== undefined && product.stockQuantity <= 0)}
-                  >
-                    {addToCartSuccess ? (
-                      <span className="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Đã thêm!
-                      </span>
-                    ) : (
-                      'Thêm vào giỏ'
-                    )}
-                  </button>
-                  <Link
-                    href="/cart"
-                    className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
-                    onClick={handleBuyNow}
-                  >
-                    Mua ngay
-                  </Link>
+                  {isProductOutOfStock(product) ? (
+                    <div className="px-6 py-3 rounded-full font-semibold shadow-sm bg-gray-300 text-gray-600 cursor-not-allowed">
+                      Hết hàng
+                    </div>
+                  ) : (
+                    <button
+                      className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''}`}
+                      onClick={handleAddToCart}
+                      disabled={product.stock_quantity !== undefined && product.stock_quantity <= 0}
+                    >
+                      {addToCartSuccess ? (
+                        <span className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Đã thêm!
+                        </span>
+                      ) : (
+                        'Thêm vào giỏ'
+                      )}
+                    </button>
+                  )}
+                  {!isProductOutOfStock(product) && (
+                    <Link
+                      href="/cart"
+                      className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
+                      onClick={handleBuyNow}
+                    >
+                      Mua ngay
+                    </Link>
+                  )}
                 </div>
               </div>
 
+              {/* Custom Order Button */}
               <div className="pt-2">
                 <button
                   onClick={() => alert('Đặt làm riêng (mock)')}
@@ -280,17 +245,21 @@ export default function ProductDetailPage() {
                   <span>Đặt làm riêng</span>
                 </button>
               </div>
-
+              
+              {/* Meta Info */}
               <div className="text-sm text-gray-500">
-                Kho: {product.stockQuantity ?? '—'} · Đã bán: {product.quantitySold ?? '—'}
+                Kho: {product.stock_quantity ?? '—'} · Đã bán: {product.quantity_sold ?? '—'}
               </div>
 
-              <div className="pt-4 border-t">
-                <h3 className="font-medium mb-2">Danh mục</h3>
-                <Link href={`/shop/products?categoryId=${product.categoryId ?? ''}`} className="text-sm text-[#0f172a] hover:underline">
-                  {product.categoryName ?? 'Không xác định'}
-                </Link>
-              </div>
+              {/* Category Link */}
+              {categoryName && product.category_id && (
+                 <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-2">Danh mục</h3>
+                    <Link href={`/shop/products?categoryId=${product.category_id}`} className="text-sm text-[#0f172a] hover:underline">
+                      {categoryName}
+                    </Link>
+                  </div>
+              )}
             </div>
           </div>
         )}

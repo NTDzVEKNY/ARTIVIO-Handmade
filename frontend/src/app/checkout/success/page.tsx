@@ -226,15 +226,31 @@ export default function CheckoutSuccessPage() {
             </div>
           </div>
 
+          {/* Payment Instructions for Bank Transfer */}
+          {order.paymentMethod === 'bank_transfer' && (
+            <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 mb-6">
+              <h3 className="font-bold text-blue-900 mb-4">Hướng dẫn thanh toán</h3>
+              <div className="text-sm text-blue-800 space-y-2">
+                <p>Vui lòng chuyển khoản số tiền <strong>₫{order.total.toLocaleString('vi-VN')}</strong> đến:</p>
+                <div className="bg-white p-4 rounded-lg mt-3">
+                  <p><strong>Ngân hàng:</strong> Vietcombank</p>
+                  <p><strong>Số tài khoản:</strong> 1234567890</p>
+                  <p><strong>Chủ tài khoản:</strong> ARTIVIO HANDMADE</p>
+                  <p><strong>Nội dung chuyển khoản:</strong> {order.orderNumber}</p>
+                </div>
+                <p className="mt-3">Sau khi chuyển khoản, vui lòng gửi ảnh biên lai qua email hoặc liên hệ hotline để chúng tôi xác nhận đơn hàng.</p>
+              </div>
+            </div>
+          )}
 
           {/* Next Steps */}
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 mb-6">
             <h3 className="font-bold text-gray-900 mb-4">Bước tiếp theo</h3>
             <ul className="space-y-2 text-sm text-gray-700">
-              <li>Chúng tôi đã gửi email xác nhận đơn hàng đến địa chỉ email của bạn.</li>
-              <li>Đơn hàng sẽ được xử lý trong vòng 1-2 ngày làm việc.</li>
-              <li>Bạn sẽ nhận được thông báo khi đơn hàng được giao.</li>
-              <li>Nếu có thắc mắc, vui lòng liên hệ hotline: 0903 803 556</li>
+              <li>✅ Chúng tôi đã gửi email xác nhận đơn hàng đến địa chỉ email của bạn.</li>
+              <li>📦 Đơn hàng sẽ được xử lý trong vòng 1-2 ngày làm việc.</li>
+              <li>🚚 Bạn sẽ nhận được thông báo khi đơn hàng được giao.</li>
+              <li>📞 Nếu có thắc mắc, vui lòng liên hệ hotline: 0903 803 556</li>
             </ul>
           </div>
 

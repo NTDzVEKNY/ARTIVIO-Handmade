@@ -11,8 +11,8 @@ export const columns: ColumnDef<Product>[] = [
     header: 'Ảnh',
     cell: ({ row }) => (
       <Image
-        src={row.original.image}
-        alt={row.original.productName}
+        src={row.original.image || '/artivio-logo.png'}
+        alt={row.original.name}
         width={50}
         height={50}
         className="rounded-md object-cover"
@@ -20,7 +20,7 @@ export const columns: ColumnDef<Product>[] = [
     ),
   },
   {
-    accessorKey: 'productName',
+    accessorKey: 'name',
     header: 'Tên sản phẩm',
   },
   {
@@ -35,7 +35,7 @@ export const columns: ColumnDef<Product>[] = [
     },
   },
   {
-    accessorKey: 'stockQuantity',
+    accessorKey: 'stock_quantity',
     header: 'Tồn kho',
   },
   {
