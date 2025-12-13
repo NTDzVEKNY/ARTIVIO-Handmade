@@ -5,8 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Image from "next/image";
 import Link from "next/link";
 import { Header, Footer } from "../../../components/common";
-import { ShoppingCart, ShoppingBag } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ShoppingCart, CreditCard } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import { useCart } from '@/contexts/CartContext';
 
 const PRICE_RANGES = [
@@ -379,32 +379,31 @@ function ProductsPageContent() {
                           <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
                             {product.description}
                           </p>
-                          <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #E8D5B5' }}>
+                          <div className="flex items-center justify-between pt-4 relative" style={{ borderTop: '1px solid #E8D5B5' }}>
                             <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
                               ₫{product.price.toLocaleString("vi-VN")}
                             </div>
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
+                          <div className="absolute right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
                             <button
                               type="button"
                               title="Thêm vào giỏ"
                               onClick={(e) => handleAddToCart(e, product)}
-                              className="p-2 rounded-full text-white hover:scale-110 transition-transform shadow-md cursor-pointer flex items-center justify-center"
+                              className="px-2 py-1.5 rounded-full text-white hover:scale-105 transition-transform shadow-md cursor-pointer flex items-center gap-1 text-[10px] font-medium"
                               style={{ backgroundColor: '#D96C39' }}
                             >
-                              <ShoppingCart size={16} />
+                              <ShoppingCart size={12} />
+                              <span className="whitespace-nowrap">Thêm vào giỏ</span>
                             </button>
                             <button
                               type="button"
                               title="Mua ngay"
                               onClick={(e) => handleBuyNow(e, product)}
-                              className="p-2 rounded-full text-white hover:scale-110 transition-transform shadow-md cursor-pointer flex items-center justify-center"
+                              className="px-2 py-1.5 rounded-full text-white hover:scale-105 transition-transform shadow-md cursor-pointer flex items-center gap-1 text-[10px] font-medium"
                               style={{ backgroundColor: '#3F2E23' }}
                             >
-                              <ShoppingBag size={16} />
+                              <CreditCard size={12} />
+                              <span className="whitespace-nowrap">Mua ngay</span>
                             </button>
-                            <div className="text-xs text-white px-3 py-2 rounded-full font-medium transform hover:scale-110 transition-transform shadow-md flex items-center pointer-events-none" style={{ backgroundColor: '#D96C39' }}>
-                              Xem →
-                            </div>
                             </div>
                           </div>
                         </div>
@@ -520,6 +519,7 @@ function ProductsPageContent() {
 export default function ProductsPage() {
   return (
     <div className="min-h-screen font-sans" style={{ backgroundColor: '#F7F1E8', color: '#3F2E23' }}>
+      <Toaster position="top-center" />
       <Header />
       <Suspense fallback={
         <main className="container mx-auto px-6 py-8">
