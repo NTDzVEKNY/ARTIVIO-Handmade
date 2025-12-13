@@ -30,7 +30,8 @@ export async function POST(request: Request) {
       email: userData.email,
       password: userData.password, // Trong thực tế, mật khẩu phải được mã hóa
       role: 'USER' as const,
-      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     db.users.push(newUser);
 

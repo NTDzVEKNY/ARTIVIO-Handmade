@@ -5,6 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Image from "next/image";
 import Link from "next/link";
 import { Header, Footer } from "../../../components/common";
+import { ShoppingCart, CreditCard } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import { useCart } from '@/contexts/CartContext';
 
 const PRICE_RANGES = [
   { id: 'all', label: 'Tất cả', min: 0, max: Infinity },
@@ -15,6 +18,7 @@ const PRICE_RANGES = [
 ];
 
 const categoryIcons: Record<string, string> = {
+  "Tất cả": "✨",
   "Đồng hồ": "🕰️",
   "Hoa vĩnh cửu": "🌹",
   "Quà tặng": "🎁",
@@ -31,21 +35,7 @@ const SORT_OPTIONS = [
   { id: 'price-desc', label: 'Giá giảm dần' },
 ];
 
-interface Product {
-  id: number;
-  productName: string;
-  categoryId: number;
-  categoryName: string;
-  price: string;
-  description: string;
-  image: string;
-  quantitySold?: number;
-}
-
-interface Category {
-  categoryId: number;
-  categoryName: string;
-}
+import { Product, Category } from '@/types';
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
@@ -64,32 +54,33 @@ function ProductsPageContent() {
   const [sortBy, setSortBy] = useState<string>(sortParam);
   const [page, setPage] = useState<number>(0);
   const pageSize = 24;
+  const { addItem } = useCart();
 
   const filteredProducts = products
     .filter(product => {
-      const matchesCategory = selectedCategoryId === 'all' || product.categoryId === selectedCategoryId;
+      const matchesCategory = selectedCategoryId === 'all' || product.category_id === selectedCategoryId;
       const matchesSearch = searchQuery === '' ||
-        product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase());
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const priceRange_ = PRICE_RANGES.find(r => r.id === priceRange);
-      const price = Number(product.price) || 0;
+      const price = product.price || 0;
       const matchesPrice = priceRange_ ? (price >= priceRange_.min && price <= priceRange_.max) : true;
 
       return matchesCategory && matchesSearch && matchesPrice;
     })
     .sort((a, b) => {
       if (sortBy === 'featured') {
-        const aSold = a.quantitySold || 0;
-        const bSold = b.quantitySold || 0;
+        const aSold = a.quantity_sold || 0;
+        const bSold = b.quantity_sold || 0;
         return bSold - aSold;
       } else if (sortBy === 'price-asc') {
-        const aPrice = Number(a.price) || 0;
-        const bPrice = Number(b.price) || 0;
+        const aPrice = a.price || 0;
+        const bPrice = b.price || 0;
         return aPrice - bPrice;
       } else if (sortBy === 'price-desc') {
-        const aPrice = Number(a.price) || 0;
-        const bPrice = Number(b.price) || 0;
+        const aPrice = a.price || 0;
+        const bPrice = b.price || 0;
         return bPrice - aPrice;
       }
       return 0;
@@ -132,15 +123,15 @@ function ProductsPageContent() {
     const currentId = categoryIdParam ? parseInt(categoryIdParam, 10) : 'all';
 
     if (currentId !== 'all' && !Number.isNaN(currentId)) {
-      const categoryExists = categories.some(c => c.categoryId === currentId);
+      const categoryExists = categories.some(c => c.id === currentId);
       setSelectedCategoryId(categoryExists ? currentId : 'all');
     } else {
       setSelectedCategoryId('all');
     }
     setPage(0);
     const target = currentId === 'all' ? '/shop/products' : `/shop/products?categoryId=${currentId}&page=1`;
-    router.replace(target);
-  }, [categoryIdParam, categories]);
+    router.replace(target, { scroll: false });
+  }, [categoryIdParam, categories, router]);
 
   const totalItems = filteredProducts.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -161,7 +152,33 @@ function ProductsPageContent() {
     });
 
     const queryString = params.toString();
-    router.push(`/shop/products?${queryString}`);
+    router.push(`/shop/products?${queryString}`, { scroll: false });
+  };
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (product.stock_quantity !== undefined && product.stock_quantity <= 0) {
+      toast.error('Sản phẩm đã hết hàng');
+      return;
+    }
+
+    addItem({
+      id: product.id,
+      productName: product.name,
+      price: String(product.price ?? 0),
+      image: product.image || '/artivio-logo.png',
+      stockQuantity: product.stock_quantity,
+      quantity: 1,
+    });
+
+    toast.success('Đã thêm vào giỏ hàng!');
+  };
+
+  const handleBuyNow = (e: React.MouseEvent, product: Product) => {
+    handleAddToCart(e, product);
+    router.push('/checkout');
   };
 
   if (loading) {
@@ -220,28 +237,28 @@ function ProductsPageContent() {
       {/* Category Filter */}
       <div className="mb-10">
         <div className="flex flex-wrap gap-3 justify-center">
-          {[{ categoryId: 'all', categoryName: 'Tất cả' }, ...categories].map((category) => (
+          {[{ id: 'all', name: 'Tất cả' }, ...categories].map((category) => (
             <button
-              key={category.categoryId}
+              key={category.id}
               onClick={() => {
-                if (category.categoryId === 'all') {
-                  router.push('/shop/products');
+                if (category.id === 'all') {
+                  router.push('/shop/products', { scroll: false });
                 } else {
-                  router.push(`/shop/products?categoryId=${category.categoryId}&page=1`);
+                  router.push(`/shop/products?categoryId=${category.id}&page=1`, { scroll: false });
                 }
-                setSelectedCategoryId(category.categoryId as number | 'all');
+                setSelectedCategoryId(category.id as number | 'all');
                 setPage(0);
               }}
               className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-sm border`}
               style={{
-                backgroundColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#F7F1E8',
-                color: selectedCategoryId === category.categoryId ? 'white' : '#3F2E23',
-                borderColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#D96C39'
+                backgroundColor: selectedCategoryId === category.id ? '#D96C39' : '#F7F1E8',
+                color: selectedCategoryId === category.id ? 'white' : '#3F2E23',
+                borderColor: selectedCategoryId === category.id ? '#D96C39' : '#D96C39'
               }}
             >
               <span className="flex items-center gap-3">
-                <span className="text-lg">{categoryIcons[String(category.categoryName)] ?? '🎁'}</span>
-                <span>{category.categoryName}</span>
+                <span className="text-lg">{categoryIcons[String(category.name)] ?? '🎁'}</span>
+                <span>{category.name}</span>
               </span>
             </button>
           ))}
@@ -320,56 +337,80 @@ function ProductsPageContent() {
           {pageItems.length > 0 ? (
             <div>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                {pageItems.map((product, idx) => (
-                  <Link
-                    key={product.id}
-                    href={`/shop/id/${product.id}`}
-                    className="group relative"
-                  >
-                    <div className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col" style={{
-                      backgroundColor: '#F7F1E8',
-                      borderColor: '#D96C39',
-                      border: '1px solid #E8D5B5',
-                      animation: `fadeInUp 0.5s ease-out ${idx * 0.05}s backwards`
-                    }}>
-                      {/* Image Container */}
-                      <div className="relative w-full h-48 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
-                        <Image
-                          src={product.image}
-                          alt={product.productName}
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                        {product.quantitySold && product.quantitySold > 0 && (
-                          <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
-                            ⭐ Bán chạy
-                          </div>
-                        )}
-                      </div>
+                {pageItems.map((product, idx) => {
+                  const categoryName = categories.find(c => c.id === product.category_id)?.name || 'Chưa phân loại';
+                  return (
+                    <div
+                      key={`${product.id}-${idx}`}
+                      className="group relative h-full"
+                    >
+                      <div className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col relative" style={{
+                        backgroundColor: '#F7F1E8',
+                        borderColor: '#D96C39',
+                        border: '1px solid #E8D5B5',
+                        animation: `fadeInUp 0.5s ease-out ${idx * 0.05}s backwards`
+                      }}>
+                        {/* Link bao phủ toàn bộ thẻ (lớp nền) */}
+                        <Link href={`/shop/id/${product.id}`} className="absolute inset-0 z-0" />
 
-                      {/* Content */}
-                      <div className="p-5 flex-1 flex flex-col">
-                        <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#D96C39' }}>
-                          {product.categoryName}
+                        {/* Image Container */}
+                        <div className="relative w-full h-48 overflow-hidden pointer-events-none" style={{ backgroundColor: '#E8D5B5' }}>
+                          <Image
+                            src={product.image || '/artivio-logo.png'}
+                            alt={product.name}
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          {product.quantity_sold && product.quantity_sold > 0 && (
+                            <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
+                              ⭐ Bán chạy
+                            </div>
+                          )}
                         </div>
-                        <h3 className="text-sm font-semibold mb-2 line-clamp-2 transition-colors" style={{ color: '#3F2E23' }}>
-                          {product.productName}
-                        </h3>
-                        <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
-                          {product.description}
-                        </p>
-                        <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #E8D5B5' }}>
-                          <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
-                            ₫{Number(product.price).toLocaleString("vi-VN")}
+
+                        {/* Content */}
+                        <div className="p-5 flex-1 flex flex-col pointer-events-none relative z-10">
+                          <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#D96C39' }}>
+                            {categoryName}
                           </div>
-                          <div className="text-xs text-white px-3 py-2 rounded-full font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110" style={{ backgroundColor: '#D96C39' }}>
-                            Xem →
+                          <h3 className="text-sm font-semibold mb-2 line-clamp-2 transition-colors" style={{ color: '#3F2E23' }}>
+                            {product.name}
+                          </h3>
+                          <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
+                            {product.description}
+                          </p>
+                          <div className="flex items-center justify-between pt-4 relative" style={{ borderTop: '1px solid #E8D5B5' }}>
+                            <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
+                              ₫{product.price.toLocaleString("vi-VN")}
+                            </div>
+                          <div className="absolute right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
+                            <button
+                              type="button"
+                              title="Thêm vào giỏ"
+                              onClick={(e) => handleAddToCart(e, product)}
+                              className="px-2 py-1.5 rounded-full text-white hover:scale-105 transition-transform shadow-md cursor-pointer flex items-center gap-1 text-[10px] font-medium"
+                              style={{ backgroundColor: '#D96C39' }}
+                            >
+                              <ShoppingCart size={12} />
+                              <span className="whitespace-nowrap">Thêm vào giỏ</span>
+                            </button>
+                            <button
+                              type="button"
+                              title="Mua ngay"
+                              onClick={(e) => handleBuyNow(e, product)}
+                              className="px-2 py-1.5 rounded-full text-white hover:scale-105 transition-transform shadow-md cursor-pointer flex items-center gap-1 text-[10px] font-medium"
+                              style={{ backgroundColor: '#3F2E23' }}
+                            >
+                              <CreditCard size={12} />
+                              <span className="whitespace-nowrap">Mua ngay</span>
+                            </button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </Link>
-                ))}
+                  )
+                })}
               </div>
 
               {/* Pagination */}
@@ -378,7 +419,7 @@ function ProductsPageContent() {
                   onClick={() => {
                     const nextPage = Math.max(0, safePage - 1);
                     setPage(nextPage);
-                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`);
+                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`, { scroll: false });
                   }}
                   disabled={safePage === 0}
                   className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-sm"
@@ -409,7 +450,7 @@ function ProductsPageContent() {
                       key={i}
                       onClick={() => {
                         setPage(i);
-                        router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${i + 1}`);
+                        router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${i + 1}`, { scroll: false });
                       }}
                       className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-110 shadow-sm"
                       style={{
@@ -428,7 +469,7 @@ function ProductsPageContent() {
                   onClick={() => {
                     const nextPage = Math.min(totalPages - 1, safePage + 1);
                     setPage(nextPage);
-                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`);
+                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`, { scroll: false });
                   }}
                   disabled={safePage >= totalPages - 1}
                   className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-sm"
@@ -478,6 +519,7 @@ function ProductsPageContent() {
 export default function ProductsPage() {
   return (
     <div className="min-h-screen font-sans" style={{ backgroundColor: '#F7F1E8', color: '#3F2E23' }}>
+      <Toaster position="top-center" />
       <Header />
       <Suspense fallback={
         <main className="container mx-auto px-6 py-8">

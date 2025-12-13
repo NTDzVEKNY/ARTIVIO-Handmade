@@ -4,11 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Image from "next/image";
 import Link from "next/link";
+import { useCart } from '@/contexts/CartContext';
+import CartSidebar from '@/components/cart/CartSidebar';
 
-interface Category {
-  categoryId: number;
-  categoryName: string;
-}
+import { Category } from '@/types';
 
 const categoryIcons: Record<string, string> = {
   "Đồng hồ": "🕰️",
@@ -24,10 +23,13 @@ const categoryIcons: Record<string, string> = {
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [isAccountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const { data: session, status } = useSession();
+  const { getTotalItems } = useCart();
+  const cartItemCount = getTotalItems();
 
   useEffect(() => {
     fetch('/api/categories')
@@ -100,15 +102,15 @@ export default function Header() {
             <div className={`absolute top-full left-0 mt-2 w-56 rounded-lg shadow-lg transition-all duration-300 origin-top ${isOpen ? 'opacity-100 scale-y-100 visible' : 'opacity-0 scale-y-95 invisible'}`} style={{ backgroundColor: '#F7F1E8', borderColor: '#D96C39', border: '1px solid #D96C39' }}>
               {categories.map((cat, idx) => (
                 <Link
-                  key={cat.categoryId}
-                  href={`/shop/products?categoryId=${cat.categoryId}`}
+                  key={cat.id}
+                  href={`/shop/products?categoryId=${cat.id}`}
                   onClick={() => setIsOpen(false)}
                   className={`block px-4 py-3 text-sm transition-all duration-200 relative group overflow-hidden ${idx === 0 ? 'rounded-t-lg' : ''} ${idx === categories.length - 1 ? 'rounded-b-lg' : ''}`}
                   style={{ color: '#3F2E23' }}
                 >
                   <span className="relative z-10 group-hover:font-semibold transition-all flex items-center gap-3">
-                    <span className="text-lg">{categoryIcons[cat.categoryName] ?? '🎁'}</span>
-                    <span>{cat.categoryName}</span>
+                    <span className="text-lg">{categoryIcons[cat.name] ?? '🎁'}</span>
+                    <span>{cat.name}</span>
                   </span>
                   <div className="absolute inset-0 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 -z-0" style={{ backgroundColor: '#F4C27A', opacity: 0.2 }}></div>
                 </Link>
@@ -146,13 +148,22 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-6">
-          <Link href="#" className="flex items-center gap-2 transition-all duration-300 group" style={{ color: '#F7F1E8' }}>
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="flex items-center gap-2 transition-all duration-300 group relative"
+            style={{ color: '#F7F1E8' }}
+            aria-label="Giỏ hàng"
+          >
             <span className="relative transform group-hover:scale-125 transition-transform duration-300">
               🛒
-              <span className="absolute -top-2 -right-2 text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-bold" style={{ backgroundColor: '#D96C39' }}>0</span>
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 text-white text-[10px] rounded-full min-w-[20px] h-5 flex items-center justify-center font-bold px-1" style={{ backgroundColor: '#D96C39' }}>
+                  {cartItemCount > 99 ? '99+' : cartItemCount}
+                </span>
+              )}
             </span>
             <span className="text-sm">Giỏ hàng</span>
-          </Link>
+          </button>
           {status === 'authenticated' ? (
             <div className="relative" ref={accountMenuRef}>
               <button onClick={() => setAccountMenuOpen(!isAccountMenuOpen)} className="flex items-center gap-2 transition-all duration-300 group" style={{ color: '#F7F1E8' }}>
@@ -173,9 +184,16 @@ export default function Header() {
                   <Link href="/account/orders" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-primary-light" style={{ color: '#3F2E23' }}>
                     Đơn hàng của tôi
                   </Link>
-                  <Link href="/cart" onClick={() => setAccountMenuOpen(false)} className="block px-4 py-2 text-sm hover:bg-primary-light" style={{ color: '#3F2E23' }}>
-                    Giỏ hàng
-                  </Link>
+                  <button
+                    onClick={() => {
+                      setAccountMenuOpen(false);
+                      setIsCartOpen(true);
+                    }}
+                    className="w-full text-left block px-4 py-2 text-sm hover:bg-primary-light"
+                    style={{ color: '#3F2E23' }}
+                  >                    
+                  Giỏ hàng
+                  </button>
                   <div className="border-t my-1" style={{ borderColor: '#E8D5B5' }}></div>
                   <button
                     onClick={handleLogout}
@@ -200,6 +218,8 @@ export default function Header() {
           }
         </div>
       </div>
+      {/* Cart Sidebar */}
+      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </header>
   );
 }

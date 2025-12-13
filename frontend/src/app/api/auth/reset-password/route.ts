@@ -29,7 +29,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Email không tồn tại.' }, { status: 404 });
     }
 
-    db.users.updatePassword(userIndex, newPassword); // Cập nhật mật khẩu (trong thực tế cần hash)
+    db.users[userIndex].password = newPassword; // Cập nhật mật khẩu (trong thực tế cần hash)
+    db.users[userIndex].updated_at = new Date().toISOString();
     clearOtp(email); // Xóa OTP đã sử dụng
 
     return NextResponse.json({ message: 'Mật khẩu đã được đặt lại thành công.' }, { status: 200 });
