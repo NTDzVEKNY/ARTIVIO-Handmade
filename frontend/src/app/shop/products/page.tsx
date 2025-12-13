@@ -5,6 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Image from "next/image";
 import Link from "next/link";
 import { Header, Footer } from "../../../components/common";
+import { ShoppingCart, ShoppingBag } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useCart } from '@/contexts/CartContext';
 
 const PRICE_RANGES = [
   { id: 'all', label: 'Tất cả', min: 0, max: Infinity },
@@ -15,6 +18,7 @@ const PRICE_RANGES = [
 ];
 
 const categoryIcons: Record<string, string> = {
+  "Tất cả": "✨",
   "Đồng hồ": "🕰️",
   "Hoa vĩnh cửu": "🌹",
   "Quà tặng": "🎁",
@@ -50,6 +54,7 @@ function ProductsPageContent() {
   const [sortBy, setSortBy] = useState<string>(sortParam);
   const [page, setPage] = useState<number>(0);
   const pageSize = 24;
+  const { addItem } = useCart();
 
   const filteredProducts = products
     .filter(product => {
@@ -125,7 +130,7 @@ function ProductsPageContent() {
     }
     setPage(0);
     const target = currentId === 'all' ? '/shop/products' : `/shop/products?categoryId=${currentId}&page=1`;
-    router.replace(target);
+    router.replace(target, { scroll: false });
   }, [categoryIdParam, categories, router]);
 
   const totalItems = filteredProducts.length;
@@ -147,7 +152,33 @@ function ProductsPageContent() {
     });
 
     const queryString = params.toString();
-    router.push(`/shop/products?${queryString}`);
+    router.push(`/shop/products?${queryString}`, { scroll: false });
+  };
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (product.stock_quantity !== undefined && product.stock_quantity <= 0) {
+      toast.error('Sản phẩm đã hết hàng');
+      return;
+    }
+
+    addItem({
+      id: product.id,
+      productName: product.name,
+      price: String(product.price ?? 0),
+      image: product.image || '/artivio-logo.png',
+      stockQuantity: product.stock_quantity,
+      quantity: 1,
+    });
+
+    toast.success('Đã thêm vào giỏ hàng!');
+  };
+
+  const handleBuyNow = (e: React.MouseEvent, product: Product) => {
+    handleAddToCart(e, product);
+    router.push('/checkout');
   };
 
   if (loading) {
@@ -211,9 +242,9 @@ function ProductsPageContent() {
               key={category.id}
               onClick={() => {
                 if (category.id === 'all') {
-                  router.push('/shop/products');
+                  router.push('/shop/products', { scroll: false });
                 } else {
-                  router.push(`/shop/products?categoryId=${category.id}&page=1`);
+                  router.push(`/shop/products?categoryId=${category.id}&page=1`, { scroll: false });
                 }
                 setSelectedCategoryId(category.id as number | 'all');
                 setPage(0);
@@ -309,19 +340,21 @@ function ProductsPageContent() {
                 {pageItems.map((product, idx) => {
                   const categoryName = categories.find(c => c.id === product.category_id)?.name || 'Chưa phân loại';
                   return (
-                    <Link
-                      key={product.id}
-                      href={`/shop/id/${product.id}`}
-                      className="group relative"
+                    <div
+                      key={`${product.id}-${idx}`}
+                      className="group relative h-full"
                     >
-                      <div className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col" style={{
+                      <div className="rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col relative" style={{
                         backgroundColor: '#F7F1E8',
                         borderColor: '#D96C39',
                         border: '1px solid #E8D5B5',
                         animation: `fadeInUp 0.5s ease-out ${idx * 0.05}s backwards`
                       }}>
+                        {/* Link bao phủ toàn bộ thẻ (lớp nền) */}
+                        <Link href={`/shop/id/${product.id}`} className="absolute inset-0 z-0" />
+
                         {/* Image Container */}
-                        <div className="relative w-full h-48 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
+                        <div className="relative w-full h-48 overflow-hidden pointer-events-none" style={{ backgroundColor: '#E8D5B5' }}>
                           <Image
                             src={product.image || '/artivio-logo.png'}
                             alt={product.name}
@@ -336,7 +369,7 @@ function ProductsPageContent() {
                         </div>
 
                         {/* Content */}
-                        <div className="p-5 flex-1 flex flex-col">
+                        <div className="p-5 flex-1 flex flex-col pointer-events-none relative z-10">
                           <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#D96C39' }}>
                             {categoryName}
                           </div>
@@ -350,13 +383,33 @@ function ProductsPageContent() {
                             <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
                               ₫{product.price.toLocaleString("vi-VN")}
                             </div>
-                            <div className="text-xs text-white px-3 py-2 rounded-full font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110" style={{ backgroundColor: '#D96C39' }}>
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
+                            <button
+                              type="button"
+                              title="Thêm vào giỏ"
+                              onClick={(e) => handleAddToCart(e, product)}
+                              className="p-2 rounded-full text-white hover:scale-110 transition-transform shadow-md cursor-pointer flex items-center justify-center"
+                              style={{ backgroundColor: '#D96C39' }}
+                            >
+                              <ShoppingCart size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              title="Mua ngay"
+                              onClick={(e) => handleBuyNow(e, product)}
+                              className="p-2 rounded-full text-white hover:scale-110 transition-transform shadow-md cursor-pointer flex items-center justify-center"
+                              style={{ backgroundColor: '#3F2E23' }}
+                            >
+                              <ShoppingBag size={16} />
+                            </button>
+                            <div className="text-xs text-white px-3 py-2 rounded-full font-medium transform hover:scale-110 transition-transform shadow-md flex items-center pointer-events-none" style={{ backgroundColor: '#D96C39' }}>
                               Xem →
+                            </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   )
                 })}
               </div>
@@ -367,7 +420,7 @@ function ProductsPageContent() {
                   onClick={() => {
                     const nextPage = Math.max(0, safePage - 1);
                     setPage(nextPage);
-                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`);
+                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`, { scroll: false });
                   }}
                   disabled={safePage === 0}
                   className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-sm"
@@ -398,7 +451,7 @@ function ProductsPageContent() {
                       key={i}
                       onClick={() => {
                         setPage(i);
-                        router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${i + 1}`);
+                        router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${i + 1}`, { scroll: false });
                       }}
                       className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-110 shadow-sm"
                       style={{
@@ -417,7 +470,7 @@ function ProductsPageContent() {
                   onClick={() => {
                     const nextPage = Math.min(totalPages - 1, safePage + 1);
                     setPage(nextPage);
-                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`);
+                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`, { scroll: false });
                   }}
                   disabled={safePage >= totalPages - 1}
                   className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-sm"

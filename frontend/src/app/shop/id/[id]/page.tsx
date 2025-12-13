@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
 import { useCart } from '@/contexts/CartContext';
-import type { Product } from '@/types'; // Use the official Product type
+import type { Product, Category } from '@/types'; // Use the official Product type
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -15,6 +15,7 @@ export default function ProductDetailPage() {
   const { addItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [categoryName, setCategoryName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +41,15 @@ export default function ProductDetailPage() {
       .then((data) => {
         setProduct(data);
         setQuantity(1);
+        if (data.category_id) {
+          fetch('/api/categories')
+            .then((res) => res.json())
+            .then((cats: Category[]) => {
+              const cat = cats.find((c) => c.id === data.category_id);
+              if (cat) setCategoryName(cat.name);
+            })
+            .catch((err) => console.error('Failed to fetch categories', err));
+        }
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Không tải được sản phẩm');
@@ -220,11 +230,11 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Category Link */}
-              {product.categoryName && product.category_id && (
+              {categoryName && product.category_id && (
                  <div className="pt-4 border-t">
                     <h3 className="font-medium mb-2">Danh mục</h3>
                     <Link href={`/shop/products?categoryId=${product.category_id}`} className="text-sm text-[#0f172a] hover:underline">
-                      {product.categoryName}
+                      {categoryName}
                     </Link>
                   </div>
               )}
