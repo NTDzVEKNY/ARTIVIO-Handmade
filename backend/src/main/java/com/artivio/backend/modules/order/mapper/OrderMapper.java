@@ -1,9 +1,11 @@
 package com.artivio.backend.modules.order.mapper;
 
-
 import com.artivio.backend.modules.order.dto.OrderRequestDTO;
+import com.artivio.backend.modules.order.model.Chat;
 import com.artivio.backend.modules.order.model.Order;
+import com.artivio.backend.modules.order.model.User;
 import org.springframework.stereotype.Component;
+
 import java.time.LocalDateTime;
 
 @Component
@@ -14,14 +16,25 @@ public class OrderMapper {
             return null;
         }
         Order order = new Order();
-        order.setCustomerId(dto.getCustomerId());
+
+        if (dto.getCustomerId() != null) {
+            User customer = new User();
+            customer.setId(dto.getCustomerId());
+            order.setCustomer(customer);
+        }
+
         order.setArtisanId(dto.getArtisanId());
-        order.setChatId(dto.getChatId());
 
         order.setFullName(dto.getFullName());
         order.setPhoneNumber(dto.getPhoneNumber());
         order.setAddress(dto.getAddress());
         order.setNote(dto.getNote());
+
+
+        if (dto.getChatId() != null) {
+            Chat chat = Chat.builder().id(dto.getChatId()).build();
+            order.setChat(chat);
+        }
 
         order.setCreatedAt(LocalDateTime.now());
         order.setStatus("PENDING"); // Mặc định trạng thái mới

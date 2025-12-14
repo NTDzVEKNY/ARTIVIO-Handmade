@@ -41,6 +41,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/products").permitAll() // Lấy list sản phẩm
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll() // Lấy chi tiết 1 sản phẩm
                         .requestMatchers(HttpMethod.GET, "/api/categories").permitAll() // Lấy danh mục
+                        .requestMatchers( "/api/chat/**").permitAll() // Lấy danh mục
+                        .requestMatchers("/ws/**").permitAll() //WEB Socket
+                        .requestMatchers("/ws-raw/**").permitAll() // Web Socket RAW
 
                         // ======================================
 

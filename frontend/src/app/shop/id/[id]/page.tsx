@@ -4,18 +4,22 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Header, Footer } from '../../../../components/common';
-import type { Product } from '../../../../types';
+import Header from '@/components/common/Header';
+import Footer from '@/components/common/Footer';
+import { useCart } from '@/contexts/CartContext';
+import type { Product, Category } from '@/types'; // Use the official Product type
 
 export default function ProductDetailPage() {
   const params = useParams();
   const productId = Number(params.id);
+  const { addItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [categoryName, setCategoryName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [addToCartSuccess, setAddToCartSuccess] = useState(false);
 
   useEffect(() => {
     if (!productId || Number.isNaN(productId)) {
@@ -29,21 +33,71 @@ export default function ProductDetailPage() {
 
     fetch(`/api/products/${productId}`)
       .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          throw new Error(`Không tìm thấy sản phẩm (mã lỗi: ${res.status})`);
+        }
         return res.json() as Promise<Product>;
       })
       .then((data) => {
         setProduct(data);
+        setQuantity(1);
+        if (data.category_id) {
+          fetch('/api/categories')
+            .then((res) => res.json())
+            .then((cats: Category[]) => {
+              const cat = cats.find((c) => c.id === data.category_id);
+              if (cat) setCategoryName(cat.name);
+            })
+            .catch((err) => console.error('Failed to fetch categories', err));
+        }
       })
       .catch((err: unknown) => {
-        setError('Không tải được sản phẩm');
+        setError(err instanceof Error ? err.message : 'Không tải được sản phẩm');
         console.error(err);
       })
       .finally(() => setLoading(false));
   }, [productId]);
 
-  const increase = () => setQuantity((q) => Math.min((product?.stockQuantity ?? 9999), q + 1));
+  const increase = () =>
+    setQuantity((q) => {
+      const max = product?.stock_quantity ?? 9999;
+      return Math.min(max, q + 1);
+    });
   const decrease = () => setQuantity((q) => Math.max(1, q - 1));
+
+  const onQuantityChange = (value: string) => {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) {
+      setQuantity(1);
+      return;
+    }
+    const min = 1;
+    const max = product?.stock_quantity ?? 9999;
+    const clamped = Math.max(min, Math.min(max, Math.floor(parsed)));
+    setQuantity(clamped);
+  };
+
+  const handleAddToCart = () => {
+    if (!product || !product.id) return;
+
+    addItem({
+      id: product.id,
+      productName: product.name,
+      price: String(product.price ?? 0),
+      image: product.image || '/hero-handmade.jpg',
+      stockQuantity: product.stock_quantity,
+      quantity: quantity,
+    });
+
+    setAddToCartSuccess(true);
+    setTimeout(() => setAddToCartSuccess(false), 3000);
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    // In a real app, you would redirect to checkout
+    // For now, we'll just add to cart which is handled by handleAddToCart
+  };
 
   return (
     <div className="min-h-screen font-sans text-gray-800 bg-white">
@@ -69,77 +123,97 @@ export default function ProductDetailPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Image Section */}
             <div>
               <div className="relative rounded-2xl overflow-hidden shadow-lg">
                 <div className="w-full h-[420px] relative bg-gray-100">
                   <Image
-                    src={product.image ?? (product.images && product.images[0]) ?? '/hero-handmade.jpg'}
-                    alt={product.productName ?? product.name ?? 'Product'}
+                    src={product.image || '/hero-handmade.jpg'}
+                    alt={product.name ?? 'Product Image'}
                     fill
                     className="object-cover"
                     priority
                   />
                 </div>
               </div>
-
-              {product.images && product.images.length > 1 && (
-                <div className="mt-4 flex gap-3">
-                  {product.images.map((img, idx) => (
-                    <button
-                      key={img + idx}
-                      onClick={() => setSelectedImageIndex(idx)}
-                      className={`w-20 h-20 rounded-lg overflow-hidden border ${
-                        idx === selectedImageIndex ? 'border-[#0f172a]' : 'border-gray-200'
-                      }`}
-                    >
-                      <Image src={img} alt={`img-${idx}`} width={80} height={80} className="object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
+            {/* Details Section */}
             <div className="space-y-6">
-              <h1 className="text-2xl font-bold text-gray-900">{product.productName ?? product.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
               <div className="text-xl font-extrabold text-[#0f172a]">
-                ₫{(Number(product.price) || 0).toLocaleString('vi-VN')}
+                ₫{(product.price || 0).toLocaleString('vi-VN')}
               </div>
 
-              <div className="text-sm text-gray-600">{product.description ?? product.fullDescription}</div>
+              {product.description && (
+                <div className="text-sm text-gray-600">{product.description}</div>
+              )}
 
+              {/* Quantity and Actions */}
               <div className="flex items-center gap-4 mt-4">
                 <div className="flex items-center border rounded-full overflow-hidden">
-                  <button onClick={decrease} className="px-4 py-2 bg-gray-100">-</button>
-                  <div className="px-6 py-2">{quantity}</div>
-                  <button onClick={increase} className="px-4 py-2 bg-gray-100">+</button>
+                  <button
+                    onClick={decrease}
+                    aria-label="Giảm số lượng"
+                    className="px-4 py-2 bg-gray-100 disabled:opacity-50"
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={product.stock_quantity ?? 9999}
+                    value={quantity}
+                    onChange={(e) => onQuantityChange(e.target.value)}
+                    className="w-20 text-center px-3 py-2 outline-none appearance-none bg-white"
+                    aria-label="Số lượng"
+                  />
+                  <button
+                    onClick={increase}
+                    aria-label="Tăng số lượng"
+                    className="px-4 py-2 bg-gray-100 disabled:opacity-50"
+                    disabled={quantity >= (product.stock_quantity ?? 9999)}
+                  >
+                    +
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <button
-                    className="border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300"
-                    onClick={() => alert('Thêm vào giỏ (mock)')}
+                    className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''}`}
+                    onClick={handleAddToCart}
+                    disabled={product.stock_quantity !== undefined && product.stock_quantity <= 0}
                   >
-                    Thêm vào giỏ
+                    {addToCartSuccess ? (
+                      <span className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Đã thêm!
+                      </span>
+                    ) : (
+                      'Thêm vào giỏ'
+                    )}
                   </button>
-                  <button
-                    className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300"
-                    onClick={() => alert('Mua ngay (mock)')}
+                  <Link
+                    href="/cart"
+                    className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
+                    onClick={handleBuyNow}
                   >
                     Mua ngay
-                  </button>
+                  </Link>
                 </div>
               </div>
+
+              {/* Custom Order Button */}
               <div className="pt-2">
                 <button
                   onClick={() => alert('Đặt làm riêng (mock)')}
                   className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-orange-600 to-yellow-500 text-white px-6 py-3 rounded-full font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-5 h-5"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                     <path
                       fillRule="evenodd"
                       d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 01.75.75c0 5.056-2.383 9.555-6.084 12.436A6.75 6.75 0 019.75 22.5a.75.75 0 01-.75-.75v-4.131A15.838 15.838 0 016.382 15H2.25a.75.75 0 01-.75-.75 6.75 6.75 0 017.815-6.666zM15 6.75a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z"
@@ -149,20 +223,21 @@ export default function ProductDetailPage() {
                   <span>Đặt làm riêng</span>
                 </button>
               </div>
-
+              
+              {/* Meta Info */}
               <div className="text-sm text-gray-500">
-                Kho: {product.stockQuantity ?? product.stock ?? '—'} · Đã bán: {product.quantitySold ?? '—'}
+                Kho: {product.stock_quantity ?? '—'} · Đã bán: {product.quantity_sold ?? '—'}
               </div>
 
-              <div className="pt-4 border-t">
-                <h3 className="font-medium mb-2">Danh mục</h3>
-                <Link
-                  href={`/shop/products?categoryId=${product.categoryId}`}
-                  className="text-sm text-[#0f172a] hover:underline"
-                >
-                  {product.categoryName ?? product.category ?? 'Không xác định'}
-                </Link>
-              </div>
+              {/* Category Link */}
+              {categoryName && product.category_id && (
+                 <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-2">Danh mục</h3>
+                    <Link href={`/shop/products?categoryId=${product.category_id}`} className="text-sm text-[#0f172a] hover:underline">
+                      {categoryName}
+                    </Link>
+                  </div>
+              )}
             </div>
           </div>
         )}

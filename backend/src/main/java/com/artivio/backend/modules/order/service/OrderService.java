@@ -1,5 +1,7 @@
 package com.artivio.backend.modules.order.service;
 
+import com.artivio.backend.modules.order.model.Chat;
+import com.artivio.backend.modules.order.repository.ChatRepository;
 import com.artivio.backend.modules.order.dto.OrderItemRequestDTO;
 import com.artivio.backend.modules.order.dto.OrderRequestDTO;
 import com.artivio.backend.modules.order.mapper.OrderMapper;
@@ -32,6 +34,10 @@ public class OrderService {
     @Autowired
     private HandmadeService handmadeService;
 
+    // [NEW] Inject thêm ChatRepository để xử lý UC06
+    @Autowired
+    private ChatRepository chatRepository;
+
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(OrderRequestDTO orderRequest) {
         // 1. Tạo đối tượng Order từ DTO
@@ -45,6 +51,20 @@ public class OrderService {
         }
         else {
             throw new RuntimeException("Phương thức thanh toán không hợp lệ!");
+        }
+
+        // [NEW] Xử lý logic liên kết với Chat (UC06)
+        if (orderRequest.getChatId() != null) {
+            Chat chat = chatRepository.findById(orderRequest.getChatId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy cuộc hội thoại ID: " + orderRequest.getChatId()));
+
+            // Validate: Đảm bảo người đặt đơn chính là khách hàng trong đoạn chat
+            // (Giả sử Order đã được map Customer từ token/DTO)
+            if (order.getCustomer() != null && !chat.getCustomer().getId().equals(order.getCustomer().getId())) {
+                throw new RuntimeException("Bạn không có quyền tạo đơn hàng từ cuộc hội thoại này!");
+            }
+
+            order.setChat(chat);
         }
 
         List<OrderItem> orderItems = new ArrayList<>();
@@ -90,19 +110,19 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
-        // 2. Validate trạng thái (Chỉ cho hủy khi đang chờ hoặc đã xác nhận)
+        // 2. Validate trạng thái
         if (!"PENDING".equals(order.getStatus()) && !"CONFIRMED".equals(order.getStatus())) {
             throw new RuntimeException("Không thể hủy đơn hàng đang giao hoặc đã hoàn thành!");
         }
 
-        // 3. HOÀN KHO (Trả lại số lượng sản phẩm)
+        // 3. HOÀN KHO
         for (OrderItem item : order.getOrderItems()) {
             Product product = item.getProduct();
 
             // Cộng lại kho
             product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
 
-            // Trừ đi số đã bán (nếu cần thiết quản lý chặt)
+            // Trừ đi số đã bán
             int currentSold = product.getQuantitySold() == null ? 0 : product.getQuantitySold();
             product.setQuantitySold(Math.max(0, currentSold - item.getQuantity()));
 
@@ -119,8 +139,6 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
-        // Có thể thêm logic validate chuyển trạng thái
-        // Ví dụ: Không thể chuyển từ CANCELLED sang PENDING
         if ("CANCELLED".equals(order.getStatus())) {
             throw new RuntimeException("Đơn đã hủy không thể cập nhật trạng thái khác!");
         }
@@ -133,9 +151,6 @@ public class OrderService {
         if (!orderRepository.existsById(id)) {
             throw new RuntimeException("Đơn hàng không tồn tại để xóa!");
         }
-
-        // Vì bên Entity Order đã để cascade = CascadeType.ALL
-        // nên khi xóa Order, các OrderItem liên quan sẽ tự động bị xóa theo.
         orderRepository.deleteById(id);
     }
 }

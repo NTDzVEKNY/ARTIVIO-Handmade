@@ -4,64 +4,104 @@ import { useState, useEffect } from 'react';
 import Image from "next/image";
 import Link from "next/link";
 
-interface Product {
-  id: number;
-  productName: string;
-  price: string;
-  image: string;
-  description: string;
+import { Product } from '~/types';
+
+interface ProductWithCategory extends Product {
+  categoryName?: string;
 }
 
 export default function FeaturedProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/products?limit=8')
-      .then(res => res.json())
-      .then((data: Product[] | { content: Product[] }) => {
-        // API có thể trả về { content: [...] } hoặc [...]
-        const productList = 'content' in data && Array.isArray(data.content) ? data.content : data;
-        setProducts(Array.isArray(productList) ? productList : []);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch featured products:", err);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch('/api/products?size=0').then(res => res.json()),
+      fetch('/api/categories').then(res => res.json())
+    ])
+    .then(([productsData, categoriesData]) => {
+      const productList = Array.isArray(productsData) ? productsData : (productsData.content ?? []);
+      const normalized = Array.isArray(productList) ? productList : [];
+      
+      const categoryMap = new Map(categoriesData.map((cat: any) => [cat.id, cat.name]));
+
+      const productsWithCategory = normalized.map(product => ({
+        ...product,
+        categoryName: categoryMap.get(product.category_id)
+      }));
+
+      productsWithCategory.sort((a, b) => (Number(b.quantity_sold ?? 0) - Number(a.quantity_sold ?? 0)));
+      setProducts(productsWithCategory.slice(0, 8));
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error("Failed to fetch featured products:", err);
+      setProducts([]);
+      setLoading(false);
+    });
   }, []);
 
   return (
-    <section className="mt-12">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Sản phẩm nổi bật</h2>
-        <Link href="/shop/products" className="text-sm text-gray-600 hover:text-[#0f172a] transition-colors">Xem tất cả →</Link>
+    <section className="mt-16 py-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-3xl font-bold mb-2" style={{ color: '#3F2E23' }}>Sản phẩm nổi bật</h2>
+          <div className="h-1 w-20 rounded-full" style={{ backgroundColor: '#D96C39' }}></div>
+        </div>
+        <Link href="/shop/products" className="text-sm font-medium transition-colors" style={{ color: '#D96C39' }}>Xem tất cả →</Link>
       </div>
       
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-gray-100 rounded-lg h-64 animate-pulse"></div>
+            <div key={i} className="rounded-xl h-64 animate-pulse" style={{ backgroundColor: '#E8D5B5' }}></div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
-          {products.map((product) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          {products.map((product, idx) => (
             <Link
               key={product.id}
               href={`/shop/id/${product.id}`}
-              className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 group"
+              className="group relative"
             >
-              <div className="relative w-full h-48 bg-gray-100">
-                <Image src={product.image} alt={product.productName} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <div className="p-4">
-                <h3 className="text-sm font-medium group-hover:text-[#0f172a] transition-colors truncate">{product.productName}</h3>
-                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{product.description}</p>
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="text-sm font-semibold text-[#0f172a]">₫{Number(product.price).toLocaleString("vi-VN")}</div>
-                  <div className="text-sm bg-[#0f172a] text-white px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    Chi tiết →
+              <div className="rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col" style={{
+                backgroundColor: '#F7F1E8',
+                borderColor: '#E8D5B5',
+                border: '1px solid #E8D5B5',
+                animation: `fadeInUp 0.5s ease-out ${idx * 0.05}s backwards`
+              }}>
+                <div className="relative w-full h-44 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
+                  <Image
+                    src={product.image || 'https://placehold.co/600x400?text=No+Image'}
+                    alt={product.name}
+                    fill
+                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  {product.quantity_sold && product.quantity_sold > 0 && (
+                    <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
+                      ⭐ Bán chạy
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#D96C39' }}>
+                    {product.categoryName ?? ''}
+                  </div>
+                  <h3 className="text-sm font-semibold mb-2 line-clamp-2 group-hover:font-bold transition-all" style={{ color: '#3F2E23' }}>
+                    {product.name}
+                  </h3>
+                  <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
+                    {product.description}
+                  </p>
+                  <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #E8D5B5' }}>
+                    <div className="text-lg font-bold" style={{ color: '#D96C39' }}>
+                      ₫{product.price.toLocaleString("vi-VN")}
+                    </div>
+                    <div className="text-xs text-white px-3 py-2 rounded-full font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110" style={{ backgroundColor: '#D96C39' }}>
+                      Xem →
+                    </div>
                   </div>
                 </div>
               </div>
@@ -69,6 +109,19 @@ export default function FeaturedProducts() {
           ))}
         </div>
       )}
+
+      <style>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </section>
   );
 }
