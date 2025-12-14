@@ -8,6 +8,7 @@ import com.artivio.backend.modules.order.model.OrderItem;
 import com.artivio.backend.modules.order.repository.OrderRepository;
 import com.artivio.backend.modules.product.model.Product;
 import com.artivio.backend.modules.product.repository.ProductRepository;
+import com.artivio.backend.modules.product.service.HandmadeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,32 +29,30 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private HandmadeService handmadeService;
+
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(OrderRequestDTO orderRequest) {
         // 1. Tạo đối tượng Order từ DTO
         Order order = orderMapper.toEntity(orderRequest);
+
+        if ("COD".equalsIgnoreCase(orderRequest.getPaymentMethod())) {
+            order.setPaymentMethod("COD");
+        }
+        else if ("ONLINE".equalsIgnoreCase(orderRequest.getPaymentMethod())) {
+            order.setPaymentMethod("ONLINE");
+        }
+        else {
+            throw new RuntimeException("Phương thức thanh toán không hợp lệ!");
+        }
 
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal finalTotalPrice = BigDecimal.ZERO;
 
         // 2. Duyệt qua danh sách sản phẩm khách chọn
         for (OrderItemRequestDTO itemDto : orderRequest.getItems()) {
-            Product product = productRepository.findById(itemDto.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + itemDto.getProductId()));
-            // --- KIỂM TRA TỒN KHO ---
-            if (product.getStockQuantity() < itemDto.getQuantity()) {
-                throw new RuntimeException("Sản phẩm " + product.getProductName() + " đã hết hàng hoặc không đủ số lượng!");
-            }
-
-            // TRỪ KHO & TĂNG ĐÃ BÁN ---
-            // Trừ kho
-            product.setStockQuantity(product.getStockQuantity() - itemDto.getQuantity());
-            // Tăng đã bán (xử lý null nếu là sp mới chưa bán cái nào)
-            int currentSold = product.getQuantitySold() == null ? 0 : product.getQuantitySold();
-            product.setQuantitySold(currentSold + itemDto.getQuantity());
-
-            // LƯU LẠI PRODUCT VÀO DB
-            productRepository.save(product);
+            Product product = handmadeService.decreaseStock(itemDto.getProductId(), itemDto.getQuantity());
 
             OrderItem item = new OrderItem();
             item.setProduct(product);

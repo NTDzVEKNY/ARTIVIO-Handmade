@@ -10,6 +10,7 @@ import com.artivio.backend.modules.product.model.Category;
 import com.artivio.backend.modules.product.model.Product;
 import com.artivio.backend.modules.product.repository.CategoryRepository;
 import com.artivio.backend.modules.product.repository.ProductRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -94,4 +95,25 @@ public class HandmadeService {
 
         return products.map(productMapper::toDTO);
     }
+
+    // Hàm này vừa check tồn kho vừa trừ kho luôn
+    @Transactional
+    public Product decreaseStock(Long productId, int quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + productId));
+
+        if (product.getStockQuantity() < quantity) {
+            throw new RuntimeException("Sản phẩm " + product.getProductName() + " không đủ số lượng tồn kho!");
+        }
+
+        // Trừ kho
+        product.setStockQuantity(product.getStockQuantity() - quantity);
+
+        // Tăng số lượng đã bán
+        int currentSold = product.getQuantitySold() == null ? 0 : product.getQuantitySold();
+        product.setQuantitySold(currentSold + quantity);
+
+        return productRepository.save(product);
+    }
+
 }

@@ -24,6 +24,21 @@ public class Order {
     private BigDecimal totalPrice;
     private String status;
 
+    @Column(name = "full_name", nullable = false)
+    private String fullName; // Tên người nhận
+
+    @Column(name = "phone_number", nullable = false, length = 15)
+    private String phoneNumber; // SĐT người nhận
+
+    @Column(name = "address", nullable = false, columnDefinition = "TEXT")
+    private String address; // Địa chỉ giao hàng
+
+    @Column(name = "note")
+    private String note; // Ghi chú đơn hàng
+
+    @Column(name = "payment_method")
+    private String paymentMethod;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
