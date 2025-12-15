@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, type Order, type OrderItem } from '../_lib/mockData';
 import type { ShippingAddress, PaymentMethod } from '@/types';
+import { updateInventoryAfterOrderServer } from '@/lib/inventory';
 
 export async function POST(request: Request) {
   try {
@@ -66,13 +67,17 @@ export async function POST(request: Request) {
       total_price: Number(total) || 0,
       status: 'PENDING',
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      shippingAddress: shippingAddress,
+      paymentMethod: paymentMethod,
+      subtotal: Number(subtotal) || 0,
+      shippingFee: Number(shippingFee) || 0,
     };
 
     // Save order
     db.orders.push(order);
 
     // Create and save order items
+    const orderItems: OrderItem[] = [];
     for (const item of items) {
       const orderItem: OrderItem = {
         id: Date.now() + item.product_id,
@@ -82,18 +87,38 @@ export async function POST(request: Request) {
         price_order: item.price,
       };
       db.orderItems.push(orderItem);
+      orderItems.push(orderItem);
     }
 
-    // In a real application, you would:
-    // 1. Update product stock quantities
-    // 2. Create payment transaction
-    // 3. Send confirmation email
-    // 4. Update inventory
+    // Update product inventory after successful order
+    // This updates stock_quantity and quantity_sold for all products in the order
+    try {
+      updateInventoryAfterOrderServer(db.products, orderItems);
+    } catch (inventoryError) {
+      // If inventory update fails, we should rollback the order
+      // Remove the order and order items we just added
+      const orderIndex = db.orders.findIndex(o => o.id === orderId);
+      if (orderIndex !== -1) {
+        db.orders.remove(orderIndex);
+      }
+      db.orderItems = db.orderItems.filter(item => item.order_id !== orderId);
+      
+      const errorMessage = inventoryError instanceof Error ? inventoryError.message : 'Lỗi cập nhật kho hàng';
+      return NextResponse.json(
+        { message: errorMessage },
+        { status: 400 }
+      );
+    }
+
+    // In a real application, you would also:
+    // 1. Create payment transaction
+    // 2. Send confirmation email
 
     return NextResponse.json(
       {
         message: 'Đặt hàng thành công',
         orderId: order.id,
+        orderNumber: `ART-${order.id}`,
       },
       { status: 201 }
     );
@@ -131,32 +156,18 @@ export async function GET(request: Request) {
         };
       });
 
-      // --- Dữ liệu giả lập vì chúng ta không lưu chúng ---
-      const mockShippingAddress = {
-        fullName: "Khách hàng Artivio",
-        phone: "0903803556",
-        email: "customer@example.com",
-        address: "123 Đường ABC, Phường 1, Quận 2, Thành phố XYZ",
-        note: "Giao hàng trong giờ hành chính.",
-      };
-
-      const mockPaymentMethod = 'cod';
-      const subtotal = detailedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const shippingFee = subtotal >= 500000 ? 0 : 30000;
-      // --- Kết thúc dữ liệu giả lập ---
-
-      // Tạo đối tượng trả về chi tiết
+      // Lấy dữ liệu thực tế từ order đã lưu
       const fullOrderDetails = {
         id: order.id,
-        orderNumber: `ART-${order.id}`, // Tạo order number giả
+        orderNumber: `ART-${order.id}`,
         createdAt: order.created_at,
         status: order.status.toLowerCase(),
         total: order.total_price,
         items: detailedItems,
-        shippingAddress: mockShippingAddress,
-        paymentMethod: mockPaymentMethod,
-        subtotal: subtotal,
-        shippingFee: shippingFee,
+        shippingAddress: order.shippingAddress,
+        paymentMethod: order.paymentMethod,
+        subtotal: order.subtotal,
+        shippingFee: order.shippingFee,
       };
 
       return NextResponse.json(fullOrderDetails);

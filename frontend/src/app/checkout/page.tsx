@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { ShippingAddress, PaymentMethod } from '@/types';
 import { fetchApi } from '@/services/api';
+import { appendOrderToStorage } from '@/lib/ordersStorage';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -96,6 +97,27 @@ export default function CheckoutPage() {
       const response = await fetchApi<{ orderId: number; orderNumber: string }>('/orders', {
         method: 'POST',
         body: JSON.stringify(orderData),
+      });
+
+      appendOrderToStorage({
+        id: response.orderId,
+        orderNumber: response.orderNumber || `ART-${response.orderId}`,
+        customerName: shippingAddress.fullName,
+        phone: shippingAddress.phone,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        subtotal,
+        shippingFee,
+        total,
+        paymentMethod,
+        shippingAddress,
+        items: orderItems.map((item) => ({
+          productId: item.product_id,
+          productName: item.productName,
+          quantity: item.quantity,
+          price: Number(item.price),
+          image: item.image,
+        })),
       });
 
       // Clear cart after successful order

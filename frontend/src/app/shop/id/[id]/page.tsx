@@ -8,6 +8,7 @@ import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
 import { useCart } from '@/contexts/CartContext';
 import type { Product, Category } from '@/types'; // Use the official Product type
+import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -134,6 +135,11 @@ export default function ProductDetailPage() {
                     className="object-cover"
                     priority
                   />
+                  {isProductOutOfStock(product) && (
+                    <div className="absolute top-4 left-4 bg-red-600 text-white px-5 py-2.5 rounded-lg font-bold text-base shadow-lg z-10">
+                      Hết hàng
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -141,8 +147,15 @@ export default function ProductDetailPage() {
             {/* Details Section */}
             <div className="space-y-6">
               <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
-              <div className="text-xl font-extrabold text-[#0f172a]">
-                ₫{(product.price || 0).toLocaleString('vi-VN')}
+              <div className="flex items-center gap-4">
+                <div className="text-xl font-extrabold text-[#0f172a]">
+                  ₫{(product.price || 0).toLocaleString('vi-VN')}
+                </div>
+                {isProductOutOfStock(product) && (
+                  <div className="px-4 py-1.5 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                    {getStockStatusText(product)}
+                  </div>
+                )}
               </div>
 
               {product.description && (
@@ -151,12 +164,12 @@ export default function ProductDetailPage() {
 
               {/* Quantity and Actions */}
               <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center border rounded-full overflow-hidden">
+                <div className={`flex items-center border rounded-full overflow-hidden ${isProductOutOfStock(product) ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <button
                     onClick={decrease}
                     aria-label="Giảm số lượng"
                     className="px-4 py-2 bg-gray-100 disabled:opacity-50"
-                    disabled={quantity <= 1}
+                    disabled={quantity <= 1 || isProductOutOfStock(product)}
                   >
                     -
                   </button>
@@ -169,41 +182,50 @@ export default function ProductDetailPage() {
                     onChange={(e) => onQuantityChange(e.target.value)}
                     className="w-20 text-center px-3 py-2 outline-none appearance-none bg-white"
                     aria-label="Số lượng"
+                    disabled={isProductOutOfStock(product)}
                   />
                   <button
                     onClick={increase}
                     aria-label="Tăng số lượng"
                     className="px-4 py-2 bg-gray-100 disabled:opacity-50"
-                    disabled={quantity >= (product.stock_quantity ?? 9999)}
+                    disabled={quantity >= (product.stock_quantity ?? 9999) || isProductOutOfStock(product)}
                   >
                     +
                   </button>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button
-                    className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''}`}
-                    onClick={handleAddToCart}
-                    disabled={product.stock_quantity !== undefined && product.stock_quantity <= 0}
-                  >
-                    {addToCartSuccess ? (
-                      <span className="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        Đã thêm!
-                      </span>
-                    ) : (
-                      'Thêm vào giỏ'
-                    )}
-                  </button>
-                  <Link
-                    href="/cart"
-                    className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
-                    onClick={handleBuyNow}
-                  >
-                    Mua ngay
-                  </Link>
+                  {isProductOutOfStock(product) ? (
+                    <div className="px-6 py-3 rounded-full font-semibold shadow-sm bg-gray-300 text-gray-600 cursor-not-allowed">
+                      Hết hàng
+                    </div>
+                  ) : (
+                    <button
+                      className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''}`}
+                      onClick={handleAddToCart}
+                      disabled={product.stock_quantity !== undefined && product.stock_quantity <= 0}
+                    >
+                      {addToCartSuccess ? (
+                        <span className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Đã thêm!
+                        </span>
+                      ) : (
+                        'Thêm vào giỏ'
+                      )}
+                    </button>
+                  )}
+                  {!isProductOutOfStock(product) && (
+                    <Link
+                      href="/cart"
+                      className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
+                      onClick={handleBuyNow}
+                    >
+                      Mua ngay
+                    </Link>
+                  )}
                 </div>
               </div>
 

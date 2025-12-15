@@ -1,3 +1,5 @@
+import type { ShippingAddress, PaymentMethod } from '@/types';
+
 type User = {
 	id: number;
 	name: string;
@@ -56,6 +58,10 @@ export type Order = {
 	total_price: number;
 	status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 	created_at: string;
+	shippingAddress: ShippingAddress;
+	paymentMethod: PaymentMethod;
+	subtotal: number;
+	shippingFee: number;
 };
 
 export type OrderItem = {
@@ -2368,6 +2374,7 @@ export const db = {
 		find: (predicate: (order: Order) => boolean) => ordersStore.find(predicate),
 		filter: (predicate: (order: Order) => boolean) => ordersStore.filter(predicate),
 		findIndex: (predicate: (order: Order) => boolean) => ordersStore.findIndex(predicate),
+		remove: (index: number) => { if (index !== -1) ordersStore.splice(index, 1); },
 	},
 	chats: {
 		push: (chat: Chat) => chatsStore.push(chat),
