@@ -36,6 +36,7 @@ const SORT_OPTIONS = [
 ];
 
 import { Product, Category } from '@/types';
+import { initializeProductsStorage, isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
@@ -103,8 +104,14 @@ function ProductsPageContent() {
         const categoriesData: Category[] = await categoriesRes.json();
 
         const productList = 'content' in productsData && Array.isArray(productsData.content) ? productsData.content : productsData;
-        setProducts(Array.isArray(productList) ? productList : []);
+        const validProducts = Array.isArray(productList) ? productList : [];
+        setProducts(validProducts);
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        
+        // Initialize localStorage with products from server
+        if (validProducts.length > 0) {
+          initializeProductsStorage(validProducts);
+        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
         setProducts([]);
@@ -361,7 +368,13 @@ function ProductsPageContent() {
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-500"
                           />
-                          {product.quantity_sold && product.quantity_sold > 0 && (
+                          {/* Out of Stock Badge */}
+                          {isProductOutOfStock(product) && (
+                            <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg z-10">
+                              Hết hàng
+                            </div>
+                          )}
+                          {product.quantity_sold && product.quantity_sold > 0 && !isProductOutOfStock(product) && (
                             <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
                               ⭐ Bán chạy
                             </div>
@@ -380,30 +393,45 @@ function ProductsPageContent() {
                             {product.description}
                           </p>
                           <div className="flex items-center justify-between pt-4 relative" style={{ borderTop: '1px solid #E8D5B5' }}>
-                            <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
-                              ₫{product.price.toLocaleString("vi-VN")}
+                            <div className="flex flex-col">
+                              <div className="text-lg font-semibold" style={{ color: '#D96C39' }}>
+                                ₫{product.price.toLocaleString("vi-VN")}
+                              </div>
+                              {isProductOutOfStock(product) && (
+                                <div className="text-xs font-semibold mt-1" style={{ color: '#DC2626' }}>
+                                  {getStockStatusText(product)}
+                                </div>
+                              )}
                             </div>
-                          <div className="absolute right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
-                            <button
-                              type="button"
-                              title="Thêm vào giỏ"
-                              onClick={(e) => handleAddToCart(e, product)}
-                              className="px-2 py-1.5 rounded-full text-white hover:scale-105 transition-transform shadow-md cursor-pointer flex items-center gap-1 text-[10px] font-medium"
-                              style={{ backgroundColor: '#D96C39' }}
-                            >
-                              <ShoppingCart size={12} />
-                              <span className="whitespace-nowrap">Thêm vào giỏ</span>
-                            </button>
-                            <button
-                              type="button"
-                              title="Mua ngay"
-                              onClick={(e) => handleBuyNow(e, product)}
-                              className="px-2 py-1.5 rounded-full text-white hover:scale-105 transition-transform shadow-md cursor-pointer flex items-center gap-1 text-[10px] font-medium"
-                              style={{ backgroundColor: '#3F2E23' }}
-                            >
-                              <CreditCard size={12} />
-                              <span className="whitespace-nowrap">Mua ngay</span>
-                            </button>
+                          <div className={`absolute right-0 flex items-center gap-1 transition-opacity duration-300 pointer-events-auto ${isProductOutOfStock(product) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                            {isProductOutOfStock(product) ? (
+                              <div className="px-3 py-1.5 rounded-full text-white shadow-md flex items-center gap-1 text-[10px] font-medium cursor-not-allowed" style={{ backgroundColor: '#9CA3AF' }}>
+                                <span className="whitespace-nowrap">Hết hàng</span>
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  title="Thêm vào giỏ"
+                                  onClick={(e) => handleAddToCart(e, product)}
+                                  className="px-2 py-1.5 rounded-full text-white hover:scale-105 transition-transform shadow-md cursor-pointer flex items-center gap-1 text-[10px] font-medium"
+                                  style={{ backgroundColor: '#D96C39' }}
+                                >
+                                  <ShoppingCart size={12} />
+                                  <span className="whitespace-nowrap">Thêm vào giỏ</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Mua ngay"
+                                  onClick={(e) => handleBuyNow(e, product)}
+                                  className="px-2 py-1.5 rounded-full text-white hover:scale-105 transition-transform shadow-md cursor-pointer flex items-center gap-1 text-[10px] font-medium"
+                                  style={{ backgroundColor: '#3F2E23' }}
+                                >
+                                  <CreditCard size={12} />
+                                  <span className="whitespace-nowrap">Mua ngay</span>
+                                </button>
+                              </>
+                            )}
                             </div>
                           </div>
                         </div>

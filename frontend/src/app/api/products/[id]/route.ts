@@ -12,10 +12,11 @@ const findProduct = (id: number) => {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = parseInt(params.id, 10);
+    const { id: idString } = await params;
+    const id = parseInt(idString, 10);
     if (isNaN(id)) {
       return NextResponse.json({ message: "ID sản phẩm không hợp lệ" }, { status: 400 });
     }
@@ -40,11 +41,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const pathname = new URL(request.url).pathname;
-    const segments = pathname.split('/');
-    const idString = segments[segments.length - 1];
+    const { id: idString } = await params;
     const id = parseInt(idString, 10);
     if (isNaN(id)) {
       return NextResponse.json({ message: "ID sản phẩm không hợp lệ" }, { status: 400 });
@@ -69,20 +69,28 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const pathname = new URL(request.url).pathname;
-  const segments = pathname.split('/');
-  const idString = segments[segments.length - 1];
-  const id = parseInt(idString, 10);
-  const { product, productIndex } = findProduct(id);
+  try {
+    const { id: idString } = await params;
+    const id = parseInt(idString, 10);
+    if (isNaN(id)) {
+      return NextResponse.json({ message: "ID sản phẩm không hợp lệ" }, { status: 400 });
+    }
+    
+    const { product, productIndex } = findProduct(id);
+    
+    if (!product) {
+      return NextResponse.json({ message: `Không tìm thấy sản phẩm với ID ${id}` }, { status: 404 });
+    }
 
-  if (!product) {
-    return NextResponse.json({ message: `Không tìm thấy sản phẩm với ID ${id}` }, { status: 404 });
+    // Xóa sản phẩm khỏi mảng dữ liệu mock
+    db.products.splice(productIndex, 1);
+
+    return new NextResponse(null, { status: 204 }); // 204 No Content: Xóa thành công, không có nội dung trả về
+  } catch (error) {
+    console.error(`Failed to delete product:`, error);
+    return NextResponse.json({ message: "Lỗi khi xóa sản phẩm" }, { status: 500 });
   }
-
-  // Xóa sản phẩm khỏi mảng dữ liệu mock
-  db.products.splice(productIndex, 1);
-
-  return new NextResponse(null, { status: 204 }); // 204 No Content: Xóa thành công, không có nội dung trả về
 }
