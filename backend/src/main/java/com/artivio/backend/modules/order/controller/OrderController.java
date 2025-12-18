@@ -10,9 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -92,5 +96,30 @@ public class OrderController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Lỗi khi xóa: " + e.getMessage());
         }
+    }
+
+    // THEO DÕI TIẾN ĐỘ (Custom Orders)
+    @GetMapping("/custom-progress")
+    public ResponseEntity<List<OrderProgressResponseDTO>> getCustomOrderProgress(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        // Lấy email từ token (vì trong SecurityConfig setup load user theo email)
+        String email = userDetails.getUsername();
+
+        // Truyền email thay vì ID
+        List<OrderProgressResponseDTO> result = orderService.getCustomOrdersProgress(email);
+        return ResponseEntity.ok(result);
+    }
+
+    // LẤY TẤT CẢ ĐƠN HÀNG CỦA TÔI
+    @GetMapping("/my-orders")
+    public ResponseEntity<List<OrderProgressResponseDTO>> getAllMyOrders(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        // Lấy email từ token (vì trong SecurityConfig setup load user theo email)
+        String email = userDetails.getUsername();
+
+        // Truyền email xuống Service
+        return ResponseEntity.ok(orderService.getAllMyOrders(email));
     }
 }
