@@ -21,7 +21,7 @@ public class Order {
     private User customer;
 
     @Column(name = "artisan_id")
-    private Long artisanId;
+    private Long artisanId = 1L;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_id", referencedColumnName = "id", nullable = true)
@@ -31,6 +31,18 @@ public class Order {
     @Column(name = "total_price")
     private BigDecimal totalPrice;
     private String status;
+
+    @Column(name = "phone_number", nullable = false, length = 15)
+    private String phoneNumber; // SĐT người nhận
+
+    @Column(name = "address", nullable = false, columnDefinition = "TEXT")
+    private String address; // Địa chỉ giao hàng
+
+    @Column(name = "note")
+    private String note; // Ghi chú đơn hàng
+
+    @Column(name = "payment_method")
+    private String paymentMethod;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

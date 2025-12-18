@@ -4,9 +4,15 @@ package com.artivio.backend.modules.order.controller;
 import com.artivio.backend.modules.order.dto.OrderRequestDTO;
 import com.artivio.backend.modules.order.model.Order;
 import com.artivio.backend.modules.order.service.OrderService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -15,8 +21,22 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
-    @PostMapping
-    public ResponseEntity<?> createOrder(@RequestBody OrderRequestDTO orderRequest) {
+    @PostMapping("/create") // Hoặc đường dẫn bạn muốn
+    public ResponseEntity<?> createOrder(
+            @Valid @RequestBody OrderRequestDTO orderRequest,
+            BindingResult result // Thêm cái này để hứng lỗi validate
+    ) {
+        // 1. Kiểm tra lỗi Validate (SĐT sai, thiếu tên...)
+        if (result.hasErrors()) {
+            // Gom tất cả lỗi lại thành 1 map để trả về cho Frontend dễ hiển thị
+            Map<String, String> errors = new HashMap<>();
+            for (FieldError error : result.getFieldErrors()) {
+                errors.put(error.getField(), error.getDefaultMessage());
+            }
+            // Trả về lỗi 400 kèm danh sách lỗi chi tiết
+            return ResponseEntity.badRequest().body(errors);
+        }
+
         try {
             Order newOrder = orderService.createOrder(orderRequest);
             return ResponseEntity.ok(newOrder);
