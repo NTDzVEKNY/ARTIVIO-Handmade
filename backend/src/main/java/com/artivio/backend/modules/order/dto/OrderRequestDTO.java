@@ -11,11 +11,8 @@ import java.util.List;
 @Data
 public class OrderRequestDTO {
     private Long customerId;
-    private Long artisanId;
+    private Long artisanId = 1L;
     private Long chatId;
-
-    @NotBlank(message = "Tên người nhận không được để trống")
-    private String fullName;
 
     @NotBlank(message = "Số điện thoại không được để trống")
     @Pattern(regexp = "^0\\d{9}$", message = "Số điện thoại không hợp lệ (phải có 10 số và bắt đầu bằng số 0)")

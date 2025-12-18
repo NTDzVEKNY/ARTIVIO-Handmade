@@ -8,9 +8,8 @@ import com.artivio.backend.modules.order.mapper.OrderMapper;
 import com.artivio.backend.modules.order.model.Order;
 import com.artivio.backend.modules.order.model.OrderItem;
 import com.artivio.backend.modules.order.repository.OrderRepository;
-import com.artivio.backend.modules.product.model.Product;
-import com.artivio.backend.modules.product.repository.ProductRepository;
-import com.artivio.backend.modules.product.service.HandmadeService;
+import com.artivio.backend.modules.order.model.Product;
+import com.artivio.backend.modules.order.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,8 +30,6 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
-    @Autowired
-    private HandmadeService handmadeService;
 
     // [NEW] Inject thêm ChatRepository để xử lý UC06
     @Autowired
@@ -72,7 +69,7 @@ public class OrderService {
 
         // 2. Duyệt qua danh sách sản phẩm khách chọn
         for (OrderItemRequestDTO itemDto : orderRequest.getItems()) {
-            Product product = handmadeService.decreaseStock(itemDto.getProductId(), itemDto.getQuantity());
+            Product product = this.decreaseStock(itemDto.getProductId(), itemDto.getQuantity());
 
             OrderItem item = new OrderItem();
             item.setProduct(product);
@@ -95,6 +92,8 @@ public class OrderService {
         // 3. Set danh sách item và tổng tiền vào Order
         order.setOrderItems(orderItems);
         order.setTotalPrice(finalTotalPrice);
+
+        System.out.println(">>> DATA DUMP: " + order.getArtisanId());
 
         // 4. Lưu xuống DB (Cascade sẽ tự lưu OrderItems)
         return orderRepository.save(order);
@@ -152,5 +151,25 @@ public class OrderService {
             throw new RuntimeException("Đơn hàng không tồn tại để xóa!");
         }
         orderRepository.deleteById(id);
+    }
+
+    // Hàm này vừa check tồn kho vừa trừ kho luôn
+    @Transactional
+    public Product decreaseStock(Long productId, int quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + productId));
+
+        if (product.getStockQuantity() < quantity) {
+            throw new RuntimeException("Sản phẩm " + product.getProductName() + " không đủ số lượng tồn kho!");
+        }
+
+        // Trừ kho
+        product.setStockQuantity(product.getStockQuantity() - quantity);
+
+        // Tăng số lượng đã bán
+        int currentSold = product.getQuantitySold() == null ? 0 : product.getQuantitySold();
+        product.setQuantitySold(currentSold + quantity);
+
+        return productRepository.save(product);
     }
 }

@@ -1,20 +1,23 @@
 package com.artivio.backend.modules.order.model;
 
-import com.artivio.backend.modules.product.model.Product;
+import com.artivio.backend.modules.order.model.Product;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "order_items")
 @Data
+@ToString
 public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
+    @ToString.Exclude
     @JoinColumn(name = "order_id")
     @JsonIgnore
     private Order order;
