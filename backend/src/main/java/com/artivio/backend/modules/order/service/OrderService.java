@@ -8,15 +8,21 @@ import com.artivio.backend.modules.order.mapper.OrderMapper;
 import com.artivio.backend.modules.order.model.Order;
 import com.artivio.backend.modules.order.model.OrderItem;
 import com.artivio.backend.modules.order.repository.OrderRepository;
-import com.artivio.backend.modules.product.model.Product;
-import com.artivio.backend.modules.product.repository.ProductRepository;
+import com.artivio.backend.modules.order.model.Product;
+import com.artivio.backend.modules.order.model.User;
+import com.artivio.backend.modules.order.repository.ProductRepository;
+import com.artivio.backend.modules.order.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
+
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -30,14 +36,27 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     // [NEW] Inject thêm ChatRepository để xử lý UC06
     @Autowired
     private ChatRepository chatRepository;
 
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(OrderRequestDTO orderRequest) {
-        // 1. Tạo đối tượng Order từ DTO (Mapping thông tin cơ bản: customer, địa chỉ, v.v.)
+        // 1. Tạo đối tượng Order từ DTO
         Order order = orderMapper.toEntity(orderRequest);
+
+        if ("COD".equalsIgnoreCase(orderRequest.getPaymentMethod())) {
+            order.setPaymentMethod("COD");
+        }
+        else if ("ONLINE".equalsIgnoreCase(orderRequest.getPaymentMethod())) {
+            order.setPaymentMethod("ONLINE");
+        }
+        else {
+            throw new RuntimeException("Phương thức thanh toán không hợp lệ!");
+        }
 
         // [NEW] Xử lý logic liên kết với Chat (UC06)
         if (orderRequest.getChatId() != null) {
@@ -58,31 +77,13 @@ public class OrderService {
 
         // 2. Duyệt qua danh sách sản phẩm khách chọn
         for (OrderItemRequestDTO itemDto : orderRequest.getItems()) {
-            Product product = productRepository.findById(itemDto.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + itemDto.getProductId()));
-
-            // --- KIỂM TRA TỒN KHO ---
-            if (product.getStockQuantity() < itemDto.getQuantity()) {
-                throw new RuntimeException("Sản phẩm " + product.getProductName() + " đã hết hàng hoặc không đủ số lượng!");
-            }
-
-            // TRỪ KHO & TĂNG ĐÃ BÁN ---
-            // Trừ kho
-            product.setStockQuantity(product.getStockQuantity() - itemDto.getQuantity());
-            // Tăng đã bán
-            int currentSold = product.getQuantitySold() == null ? 0 : product.getQuantitySold();
-            product.setQuantitySold(currentSold + itemDto.getQuantity());
-
-            // LƯU LẠI PRODUCT VÀO DB
-            productRepository.save(product);
+            Product product = this.decreaseStock(itemDto.getProductId(), itemDto.getQuantity());
 
             OrderItem item = new OrderItem();
             item.setProduct(product);
             item.setQuantity(itemDto.getQuantity());
             item.setOrder(order);
 
-            // [LƯU Ý] Nếu đơn Custom có giá riêng, cần logic override giá ở đây.
-            // Hiện tại đang lấy giá niêm yết của sản phẩm.
             Double currentProductPrice = product.getPrice();
             BigDecimal priceForOrder = BigDecimal.valueOf(currentProductPrice);
 
@@ -100,16 +101,11 @@ public class OrderService {
         order.setOrderItems(orderItems);
         order.setTotalPrice(finalTotalPrice);
 
-        // Mặc định trạng thái PENDING
-        if (order.getStatus() == null) {
-            order.setStatus("PENDING");
-            // Hoặc dùng Enum: OrderStatus.PENDING
-        }
+        System.out.println(">>> DATA DUMP: " + order.getArtisanId());
 
         // 4. Lưu xuống DB (Cascade sẽ tự lưu OrderItems)
         return orderRepository.save(order);
     }
-
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng có ID: " + id));
@@ -163,5 +159,48 @@ public class OrderService {
             throw new RuntimeException("Đơn hàng không tồn tại để xóa!");
         }
         orderRepository.deleteById(id);
+    }
+
+    // Hàm này vừa check tồn kho vừa trừ kho luôn
+    @Transactional
+    public Product decreaseStock(Long productId, int quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + productId));
+
+        if (product.getStockQuantity() < quantity) {
+            throw new RuntimeException("Sản phẩm " + product.getProductName() + " không đủ số lượng tồn kho!");
+        }
+
+        // Trừ kho
+        product.setStockQuantity(product.getStockQuantity() - quantity);
+
+        // Tăng số lượng đã bán
+        int currentSold = product.getQuantitySold() == null ? 0 : product.getQuantitySold();
+        product.setQuantitySold(currentSold + quantity);
+
+        return productRepository.save(product);
+    }
+
+    // --- THEO DÕI TIẾN ĐỘ (HÀNG ĐẶT RIÊNG) ---
+    public List<OrderProgressResponseDTO> getCustomOrdersProgress(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+
+        List<Order> customOrders = orderRepository.findByCustomerIdAndChatIdIsNotNullOrderByCreatedAtDesc(user.getId());
+
+        if (customOrders.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return customOrders.stream().map(orderMapper::mapToDTO).collect(Collectors.toList());
+    }
+
+    // --- LẤY TẤT CẢ ĐƠN HÀNG ---
+    public List<OrderProgressResponseDTO> getAllMyOrders(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+
+        List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(user.getId());
+        return orders.stream().map(orderMapper::mapToDTO).collect(Collectors.toList());
     }
 }
