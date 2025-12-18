@@ -9,14 +9,20 @@ import com.artivio.backend.modules.order.model.Order;
 import com.artivio.backend.modules.order.model.OrderItem;
 import com.artivio.backend.modules.order.repository.OrderRepository;
 import com.artivio.backend.modules.order.model.Product;
+import com.artivio.backend.modules.order.model.User;
 import com.artivio.backend.modules.order.repository.ProductRepository;
+import com.artivio.backend.modules.order.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
+
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -30,6 +36,8 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private UserRepository userRepository;
 
     // [NEW] Inject thêm ChatRepository để xử lý UC06
     @Autowired
@@ -171,5 +179,28 @@ public class OrderService {
         product.setQuantitySold(currentSold + quantity);
 
         return productRepository.save(product);
+    }
+
+    // --- THEO DÕI TIẾN ĐỘ (HÀNG ĐẶT RIÊNG) ---
+    public List<OrderProgressResponseDTO> getCustomOrdersProgress(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+
+        List<Order> customOrders = orderRepository.findByCustomerIdAndChatIdIsNotNullOrderByCreatedAtDesc(user.getId());
+
+        if (customOrders.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return customOrders.stream().map(orderMapper::mapToDTO).collect(Collectors.toList());
+    }
+
+    // --- LẤY TẤT CẢ ĐƠN HÀNG ---
+    public List<OrderProgressResponseDTO> getAllMyOrders(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+
+        List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(user.getId());
+        return orders.stream().map(orderMapper::mapToDTO).collect(Collectors.toList());
     }
 }

@@ -1,6 +1,7 @@
 package com.artivio.backend.modules.order.mapper;
 
 import com.artivio.backend.modules.order.dto.OrderRequestDTO;
+import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
 import com.artivio.backend.modules.order.model.Chat;
 import com.artivio.backend.modules.order.model.Order;
 import com.artivio.backend.modules.order.model.User;
@@ -9,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class OrderMapper {
@@ -46,5 +49,26 @@ public class OrderMapper {
         order.setCreatedAt(LocalDateTime.now());
         order.setStatus("PENDING"); // Mặc định trạng thái mới
         return order;
+    }
+
+    public OrderProgressResponseDTO mapToDTO(Order order) {
+        List<OrderProgressResponseDTO.OrderItemDTO> items = order.getOrderItems().stream()
+                .map(item -> OrderProgressResponseDTO.OrderItemDTO.builder()
+                        .productName(item.getProduct().getProductName())
+                        .quantity(item.getQuantity())
+                        .price(item.getPriceOrder())
+                        .imageUrl(item.getProduct().getImage())
+                        .build())
+                .collect(Collectors.toList());
+
+        return OrderProgressResponseDTO.builder()
+                .id(order.getId())
+                .status(order.getStatus())
+                .orderDate(order.getCreatedAt())
+                .totalPrice(order.getTotalPrice())
+                .isCustomOrder(order.getChat() != null) // Logic xác định đơn đặt riêng
+                .note(order.getNote())
+                .items(items)
+                .build();
     }
 }
