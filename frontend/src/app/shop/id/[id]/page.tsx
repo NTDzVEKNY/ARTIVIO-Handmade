@@ -9,10 +9,11 @@ import Footer from '@/components/common/Footer';
 import { useCart } from '@/contexts/CartContext';
 import type { Product, Category } from '@/types'; // Use the official Product type
 import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
+import { getProductById, getCategories } from '@/services/api'; // Import backendApi functions
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const productId = Number(params.id);
+  const productId = Array.isArray(params.id) ? Number(params.id[0]) : Number(params.id);
   const { addItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -32,31 +33,26 @@ export default function ProductDetailPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/products/${productId}`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Không tìm thấy sản phẩm (mã lỗi: ${res.status})`);
-        }
-        return res.json() as Promise<Product>;
-      })
-      .then((data) => {
-        setProduct(data);
+    const fetchData = async () => {
+      try {
+        const productData = await getProductById(String(productId)); // Fetch product
+        setProduct(productData);
         setQuantity(1);
-        if (data.category_id) {
-          fetch('/api/categories')
-            .then((res) => res.json())
-            .then((cats: Category[]) => {
-              const cat = cats.find((c) => c.id === data.category_id);
-              if (cat) setCategoryName(cat.name);
-            })
-            .catch((err) => console.error('Failed to fetch categories', err));
+
+        if (productData.category_id) {
+          const categoriesData = await getCategories(); // Fetch categories
+          const cat = categoriesData.find((c) => c.id === productData.category_id);
+          if (cat) setCategoryName(cat.name);
         }
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Không tải được sản phẩm');
         console.error(err);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [productId]);
 
   const increase = () =>
