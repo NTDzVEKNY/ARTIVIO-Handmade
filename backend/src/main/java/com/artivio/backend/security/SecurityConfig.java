@@ -37,7 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/login", "/api/register").permitAll()
 
                         // Public GET resources
-                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/category").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/category/**").permitAll()
 
                         // WebSocket (Note: Check specific WS security in WebSocketConfig)
                         .requestMatchers("/api/chat/**", "/ws/**", "/ws-raw/**").permitAll()
