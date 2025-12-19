@@ -4,6 +4,8 @@ import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/app/api/_lib/mockData";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 const handler = NextAuth({
   providers: [
     GoogleProvider({
@@ -25,25 +27,38 @@ const handler = NextAuth({
           return null;
         }
 
-        // Tìm user trong "cơ sở dữ liệu" mock
-        const user = db.users.find(u => u.email === credentials.email);
+        const res = await fetch(`${API_URL}/login`, {
+            method: "POST",
+            body: JSON.stringify(credentials),
+            headers: { "Content-Type": "application/json"},
+        });
 
-        // Nếu không tìm thấy user hoặc sai mật khẩu
-        if (!user || user.password !== credentials.password) {
-          // Trả về null sẽ gây ra lỗi, chúng ta sẽ throw Error để có thông báo rõ ràng
-          throw new Error('Tài khoản hoặc mật khẩu không chính xác');
+        const loginResponse = await res.json();
+
+        if (!res.ok) {
+            throw new Error(loginResponse.error)
         }
 
         // Nếu thành công, trả về đối tượng user bao gồm cả role
-        return { id: user.id.toString(), name: user.name, email: user.email, role: user.role };
+        return {
+            id: loginResponse.id.toString(),
+            name: loginResponse.name,
+            email: loginResponse.email,
+            role: loginResponse.role,
+            apiAccessToken: loginResponse.token,
+        };
       }
     })
   ],
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       if (!user.email) {
         // Không cho phép đăng nhập nếu nhà cung cấp không trả về email
         return false;
+      }
+
+      if (account?.provider === "credentials") {
+            return true;
       }
 
       // Kiểm tra xem user đã tồn tại trong "cơ sở dữ liệu" mock của chúng ta chưa
@@ -67,20 +82,33 @@ const handler = NextAuth({
 
       return true; // Cho phép đăng nhập
     },
-    async jwt({ token, user }) {
-      // Khi user đăng nhập (lần đầu tiên callback này được gọi), đối tượng `user` sẽ có sẵn.
-      // Thêm role vào token.
-      if (user) {
-        token.role = (user as any).role;
-      }
-      return token;
+    async jwt({ token, user, account })
+    {
+        // Lần đầu đăng nhập (Sign In), tham số `user` và `account` sẽ có dữ liệu
+        if (user && account) {
+            if (account.provider === "credentials") {
+                // Lấy role và accessToken từ object mà hàm authorize() trả về
+                token.role = (user as any).role;
+
+                const apiAccessToken = (user as any).apiAccessToken;
+                token.apiAccessToken = apiAccessToken;
+
+            } else {
+                token.role = (user as any).role;
+            }
+        }
+        return token;
     },
-    async session({ session, token }) {
+    async session({ session, token, user }) {
       // Thêm thông tin từ token vào đối tượng session để client có thể sử dụng
+        console.log("tk: ");
+        console.log(token);
       if (session.user) {
         // Gán role từ token vào session.user
         (session.user as any).role = token.role;
       }
+      console.log("ss: ");
+      console.log(session);
       return session;
     },
   },
