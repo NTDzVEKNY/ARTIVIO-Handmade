@@ -5,7 +5,8 @@ USE `handmade`;
 LOCK TABLES `users` WRITE;
 /*!40000ALTER TABLE `users` DISABLE KEYS */;
 INSERT INTO users (name, email, password, role)
-VALUES ('Admin', 'admin@example.com', '$2a$12$SF4ZfkEh67HBvoAD2mT7/.ngDgPtlH/HinABY4KiuZ5YRZTE81yu.', 'admin');
+VALUES ('Admin', 'admin@example.com', '$2a$12$SF4ZfkEh67HBvoAD2mT7/.ngDgPtlH/HinABY4KiuZ5YRZTE81yu.', 'admin'),
+       ('User', 'user@example.com', '$2a$12$EgrXGyGHS2lIo0yCox.WxexmoBt24zM2dYOiV8TW5Yqju64NfKqAa', 'user');
 /*!40000ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 

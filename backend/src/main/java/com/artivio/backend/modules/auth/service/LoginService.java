@@ -35,6 +35,9 @@ public class LoginService {
         return LoginResponseDTO.builder()
                 .token(jwtToken)
                 .role(user.getRole())
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
                 .build();
     }
 
