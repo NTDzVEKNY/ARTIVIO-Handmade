@@ -24,7 +24,7 @@ const categoryIcons: Record<string, string> = {
   "Quà tặng": "🎁",
   "Thiệp handmade": "💌",
   "Phụ kiện & nguyên liệu": "🧵",
-  "Vải decor": "🎨",
+  "Vải decor": "🧣",
   "Ví & passport": "💼",
   "Limited": "🌟",
 };
@@ -37,7 +37,7 @@ const SORT_OPTIONS = [
 
 import { Product, Category, ProductResponse } from '@/types';
 import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
-import apiClient from '@/services/apiClient';
+import { axiosClient as apiClient } from '@/lib/axios';
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();

@@ -9,7 +9,7 @@ import Footer from '@/components/common/Footer';
 import { useCart } from '@/contexts/CartContext';
 import type { Product, ProductResponse } from '@/types'; // Use the official Product type
 import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory'; // Giữ lại helper functions
-import apiClient from '@/services/apiClient'; // Sử dụng apiClient
+import { axiosClient as apiClient } from '@/lib/axios'; // Sử dụng axiosClient
 
 // Kiểu dữ liệu này đại diện cho những gì API /products/{id} thực sự trả về.
 // Nó khác với kiểu Product chung.

@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from "next/image";
 import Link from "next/link";
 
-import apiClient from '@/services/apiClient'; // 1. Thay thế bằng apiClient
-import { Product, ProductResponse } from '@/types'; // Lấy cả 2 type từ một nguồn
+import { axiosClient as apiClient } from '@/lib/axios';
+import { Product, ProductResponse } from '@/types';
 
 export default function FeaturedProducts() {
   const [products, setProducts] = useState<Product[]>([]);

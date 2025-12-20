@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useCart } from '@/contexts/CartContext';
 import CartSidebar from '@/components/cart/CartSidebar';
 
-import apiClient from '@/services/apiClient';
+import { axiosClient as apiClient } from '@/lib/axios';
 import { Category } from '@/types';
 
 const categoryIcons: Record<string, string> = {

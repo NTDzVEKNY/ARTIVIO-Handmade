@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import apiClient from '@/services/apiClient';
-import { Category, Product, ProductResponse } from '@/types'; // Gom các type vào một chỗ
+import { axiosClient as apiClient } from '@/lib/axios';
+import { Category, Product, ProductResponse } from '@/types';
 
 interface EnrichedCategory extends Category {
   soldCount?: number;
