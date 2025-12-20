@@ -35,9 +35,9 @@ const SORT_OPTIONS = [
   { id: 'price-desc', label: 'Giá giảm dần' },
 ];
 
-import { Product, Category } from '@/types';
-import { initializeProductsStorage, isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
-import { getProducts, getCategories, ProductResponse } from '@/services/api';
+import { Product, Category, ProductResponse } from '@/types';
+import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
+import apiClient from '@/services/apiClient';
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
@@ -81,29 +81,38 @@ function ProductsPageContent() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const categoriesData = await getCategories();
-        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        // Backend có các endpoint khác nhau cho việc lấy tất cả sản phẩm và lấy sản phẩm theo danh mục.
+        // Chúng ta sẽ quyết định URL để gọi API cho đúng.
+        const isFilteringByCategory = selectedCategoryId !== 'all';
+        const productsUrl = isFilteringByCategory
+          ? `/category/${selectedCategoryId}/products`
+          : '/products';
 
-        const currentPriceRange = PRICE_RANGES.find(r => r.id === priceRange);
-        
-        const productsResponse: ProductResponse = await getProducts({
-          categoryId: selectedCategoryId,
-          q: searchQuery,
-          sort: sortBy,
-          page: page, // Backend expects 0-indexed page
-          size: pageSize,
-        });
+        // 2. Gọi API song song để lấy danh mục và sản phẩm
+        const [categoriesResponse, productsResponse] = await Promise.all([
+          apiClient.get<Category[]>('/category'),
+          // Sử dụng URL động đã xác định ở trên
+          apiClient.get<ProductResponse>(productsUrl, {
+            params: {
+              // LƯU Ý: Backend hiện tại chỉ hỗ trợ 'page' và 'size'.
+              // Các tham số lọc khác (sort, q, minPrice...) sẽ bị bỏ qua cho đến khi backend được nâng cấp.
+              page: page,
+              size: pageSize,
+            },
+          }),
+        ]);
 
-        setProducts(productsResponse.content);
-        setTotalElements(productsResponse.totalElements);
-        setTotalPages(productsResponse.totalPages);
+        // 3. Cập nhật state từ dữ liệu API
+        setCategories(categoriesResponse.data || []);
 
-        // Initialize localStorage with products from server
-        if (productsResponse.content.length > 0) {
-          initializeProductsStorage(productsResponse.content);
-        }
+        // Dữ liệu trả về từ backend có trường 'content' và 'size' (là totalElements)
+        setProducts(productsResponse.data.content || []);
+        setTotalElements(productsResponse.data.size || 0);
+        setTotalPages(productsResponse.data.totalPages || 1);
+
       } catch (error) {
         console.error("Failed to fetch data:", error);
+        toast.error("Không thể tải dữ liệu. Vui lòng thử lại.");
         setProducts([]);
         setCategories([]);
         setTotalElements(0);
@@ -113,7 +122,9 @@ function ProductsPageContent() {
       }
     };
     fetchData();
-  }, [selectedCategoryId, searchQuery, priceRange, sortBy, page, pageSize]);
+    // Chỉ fetch lại dữ liệu khi các tham số ảnh hưởng trực tiếp đến API thay đổi.
+    // Các bộ lọc khác (search, price, sort) sẽ được xử lý sau khi backend được nâng cấp.
+  }, [selectedCategoryId, page, pageSize]);
 
   const currentTotalElements = totalElements; // Use totalElements from backend
   const currentTotalPages = totalPages; // Use totalPages from backend
@@ -155,17 +166,17 @@ function ProductsPageContent() {
     e.preventDefault();
     e.stopPropagation();
     
-    if (product.stock_quantity !== undefined && product.stock_quantity <= 0) {
+    if (product.stockQuantity !== undefined && product.stockQuantity <= 0) {
       toast.error('Sản phẩm đã hết hàng');
       return;
     }
 
     addItem({
       id: product.id,
-      productName: product.name,
+      productName: product.productName,
       price: String(product.price ?? 0),
       image: product.image || '/artivio-logo.png',
-      stockQuantity: product.stock_quantity,
+      stockQuantity: product.stockQuantity,
       quantity: 1,
     });
 
@@ -176,16 +187,6 @@ function ProductsPageContent() {
     handleAddToCart(e, product);
     router.push('/checkout');
   };
-
-  if (loading) {
-    return (
-      <div className="text-center py-16">
-        <div className="text-lg font-medium animate-pulse" style={{ color: '#D96C39' }}>
-          ✨ Đang tải sản phẩm...
-        </div>
-      </div>
-    );
-  }
 
   return (
     <main className="container mx-auto px-6 py-12" style={{ background: 'linear-gradient(to bottom, #F7F1E8, #F7F1E8)' }}>
@@ -236,25 +237,28 @@ function ProductsPageContent() {
       {/* Category Filter */}
       <div className="mb-10">
         <div className="flex flex-wrap gap-3 justify-center">
-          {[{ id: 'all', name: 'Tất cả' }, ...categories].map((category) => (
+          {([
+            { categoryId: 'all', categoryName: 'Tất cả' } as const,
+            ...categories,
+          ]).map((category) => (
             <button
-              key={category.id}
+              key={category.categoryId} // The type of `category` is now correctly inferred as a union
               onClick={() => {
-                const newCategoryId = category.id;
-                setSelectedCategoryId(Number(newCategoryId));
+                const newCategoryId = category.categoryId;
+                setSelectedCategoryId(newCategoryId);
                 setPage(0); // Reset page on category change
                 updateUrlParams({ categoryId: newCategoryId, page: 1 });
               }}
               className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-sm border`}
               style={{
-                backgroundColor: selectedCategoryId === category.id ? '#D96C39' : '#F7F1E8',
-                color: selectedCategoryId === category.id ? 'white' : '#3F2E23',
-                borderColor: selectedCategoryId === category.id ? '#D96C39' : '#D96C39'
+                backgroundColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#F7F1E8',
+                color: selectedCategoryId === category.categoryId ? 'white' : '#3F2E23',
+                borderColor: selectedCategoryId === category.categoryId ? '#D96C39' : '#D96C39'
               }}
             >
               <span className="flex items-center gap-3">
-                <span className="text-lg">{categoryIcons[String(category.name)] ?? '🎁'}</span>
-                <span>{category.name}</span>
+                <span className="text-lg">{categoryIcons[String(category.categoryName)] ?? '🎁'}</span>
+                <span>{category.categoryName}</span>
               </span>
             </button>
           ))}
@@ -330,11 +334,12 @@ function ProductsPageContent() {
           </div>
 
           {/* Products Grid */}
-          {products.length > 0 ? (
+          <div className={`relative transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+            {products.length > 0 ? (
             <div>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
                 {products.map((product, idx) => {
-                  const categoryName = categories.find(c => c.id === product.category_id)?.name || 'Chưa phân loại';
+                  const categoryName = product.categoryName || 'Chưa phân loại';
                   return (
                     <div
                       key={`${product.id}-${idx}`}
@@ -352,8 +357,8 @@ function ProductsPageContent() {
                         {/* Image Container */}
                         <div className="relative w-full h-48 overflow-hidden pointer-events-none" style={{ backgroundColor: '#E8D5B5' }}>
                           <Image
-                            src={product.image || '/artivio-logo.png'}
-                            alt={product.name}
+                            src={product.image ? (product.image.startsWith('http') ? product.image : `https://${product.image}`) : '/artivio-logo.png'}
+                            alt={product.productName}
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-500"
                           />
@@ -363,7 +368,7 @@ function ProductsPageContent() {
                               Hết hàng
                             </div>
                           )}
-                          {product.quantity_sold && product.quantity_sold > 0 && !isProductOutOfStock(product) && (
+                          {product.quantitySold && product.quantitySold > 0 && !isProductOutOfStock(product) && (
                             <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
                               ⭐ Bán chạy
                             </div>
@@ -376,7 +381,7 @@ function ProductsPageContent() {
                             {categoryName}
                           </div>
                           <h3 className="text-sm font-semibold mb-2 line-clamp-2 transition-colors" style={{ color: '#3F2E23' }}>
-                            {product.name}
+                            {product.productName}
                           </h3>
                           <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
                             {product.description}
@@ -503,17 +508,18 @@ function ProductsPageContent() {
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-20">
-              <div className="text-8xl mb-6 animate-bounce">🔍</div>
-              <h3 className="text-2xl font-semibold mb-3" style={{ color: '#3F2E23' }}>Không tìm thấy sản phẩm</h3>
-              <p className="text-base" style={{ color: '#6B4F3E' }}>
-                {searchQuery
-                  ? `Không có sản phẩm nào phù hợp với "${searchQuery}". Hãy thử từ khóa khác.`
-                  : "Hãy thử chọn danh mục hoặc mức giá khác."}
-              </p>
-            </div>
-          )}
+            ) : (
+              !loading && (
+                <div className="text-center py-20">
+                  <div className="text-8xl mb-6 animate-bounce">🔍</div>
+                  <h3 className="text-2xl font-semibold mb-3" style={{ color: '#3F2E23' }}>Không tìm thấy sản phẩm</h3>
+                  <p className="text-base" style={{ color: '#6B4F3E' }}>
+                    Hãy thử chọn một danh mục hoặc mức giá khác.
+                  </p>
+                </div>
+              )
+            )}
+          </div>
         </div>
       </div>
 

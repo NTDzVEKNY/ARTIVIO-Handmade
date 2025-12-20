@@ -1,25 +1,23 @@
 export type Product = {
 	id: number;
-	artisan_id: number;
-	category_id: number | null;
-	name: string;
+	productName: string;
 	description: string | null;
 	price: number;
 	image: string | null;
 	status: 'ACTIVE' | 'HIDDEN';
-	quantity_sold: number;
-	stock_quantity: number;
-	created_at: string;
-	updated_at: string;
+	quantitySold: number;
+	stockQuantity: number;
+	categoryId: number;
+	categoryName: string;
 };
 
 export type Category = {
-	id: number;
-	name: string;
+	categoryId: number;
+	categoryName: string;
 	slug: string;
-	parent_id: number | null;
-	created_at: string;
-	updated_at: string;
+	parentId: number | null;
+	createdAt: string;
+	updatedAt: string;
 };
 
 export type CartItem = {
@@ -58,4 +56,27 @@ export type Order = {
 	status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 	created_at: string;
 	updated_at: string;
+};
+
+export type ProductResponse = {
+  content: Product[];
+  totalPages: number;
+  currentPage: number;
+  size: number; // Backend đang trả về tổng số sản phẩm trong trường này
+};
+
+export type UserCredentials = {
+  email?: string;
+  password?: string;
+};
+
+export type AuthResponse = {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    fullName: string;
+    role: string;
+    // Thêm các trường user khác nếu có
+  };
 };
