@@ -7,17 +7,18 @@ import Link from "next/link";
 import { useCart } from '@/contexts/CartContext';
 import CartSidebar from '@/components/cart/CartSidebar';
 
+import { axiosClient as apiClient } from '@/lib/axios';
 import { Category } from '@/types';
 
 const categoryIcons: Record<string, string> = {
-  "Đồng hồ": "🕰️",
-  "Hoa vĩnh cửu": "🌹",
-  "Quà tặng": "🎁",
-  "Thiệp handmade": "💌",
-  "Phụ kiện & nguyên liệu": "🧵",
-  "Vải decor": "🎨",
-  "Ví & passport": "💼",
-  "Limited": "🌟",
+  "đồng hồ": "🕰️",
+  "hoa vĩnh cửu": "🌹",
+  "quà tặng": "🎁",
+  "thiệp handmade": "💌",
+  "phụ kiện & nguyên liệu": "🧵",
+  "vải decor": "🧣",
+  "ví & passport": "💼",
+  "limited": "🌟",
 };
 
 export default function Header() {
@@ -32,11 +33,30 @@ export default function Header() {
   const cartItemCount = getTotalItems();
 
   useEffect(() => {
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(data => setCategories(Array.isArray(data) ? data : []))
-      .catch(err => console.error("Failed to fetch categories for header:", err));
+    const fetchHeaderData = async () => {
+      try {
+        // Sử dụng apiClient và đúng endpoint '/category'
+        const response = await apiClient.get<Category[] | { content: Category[] }>('/category');
+        
+        // Backend có thể trả về mảng trực tiếp, hoặc đối tượng Pageable { content: [...] }
+        const categoryData = Array.isArray(response.data) ? response.data : response.data.content;
 
+        if (Array.isArray(categoryData)) {
+          // Lọc ra các danh mục không hợp lệ (thiếu id hoặc name) để tránh lỗi
+          const validCategories = categoryData.filter(cat => cat && typeof cat.categoryId === 'number' && typeof cat.categoryName === 'string');
+          setCategories(validCategories);
+        } else {
+          console.error("Dữ liệu danh mục cho header không phải là một mảng:", response.data);
+          setCategories([]);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải danh mục cho header:", error);
+        setCategories([]); // Đảm bảo là mảng rỗng khi có lỗi
+      }
+    };
+
+    fetchHeaderData();
+    
     const handleClickOutside = (event: MouseEvent) => {
       // Đóng dropdown danh mục
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -102,15 +122,15 @@ export default function Header() {
             <div className={`absolute top-full left-0 mt-2 w-56 rounded-lg shadow-lg transition-all duration-300 origin-top ${isOpen ? 'opacity-100 scale-y-100 visible' : 'opacity-0 scale-y-95 invisible'}`} style={{ backgroundColor: '#F7F1E8', borderColor: '#D96C39', border: '1px solid #D96C39' }}>
               {categories.map((cat, idx) => (
                 <Link
-                  key={cat.id}
-                  href={`/shop/products?categoryId=${cat.id}`}
+                  key={cat.categoryId}
+                  href={`/shop/products?categoryId=${cat.categoryId}`}
                   onClick={() => setIsOpen(false)}
                   className={`block px-4 py-3 text-sm transition-all duration-200 relative group overflow-hidden ${idx === 0 ? 'rounded-t-lg' : ''} ${idx === categories.length - 1 ? 'rounded-b-lg' : ''}`}
                   style={{ color: '#3F2E23' }}
                 >
-                  <span className="relative z-10 group-hover:font-semibold transition-all flex items-center gap-3">
-                    <span className="text-lg">{categoryIcons[cat.name] ?? '🎁'}</span>
-                    <span>{cat.name}</span>
+                  <span className="relative z-10 group-hover:font-semibold transition-all flex items-center gap-3">                    
+                    <span className="text-lg">{categoryIcons[(cat.categoryName || '').toLowerCase().trim()] || '🎁'}</span>
+                    <span>{cat.categoryName}</span>
                   </span>
                   <div className="absolute inset-0 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 -z-0" style={{ backgroundColor: '#F4C27A', opacity: 0.2 }}></div>
                 </Link>

@@ -95,21 +95,21 @@ function validateStockAvailability(
     }
 
     // Validate stock quantity is sufficient
-    if (product.stock_quantity < orderItem.quantity) {
+    if (product.stockQuantity < orderItem.quantity) {
       throw new InventoryError(
-        `Insufficient stock for product "${product.name}". Available: ${product.stock_quantity}, Requested: ${orderItem.quantity}`,
+        `Insufficient stock for product "${product.productName}". Available: ${product.stockQuantity}, Requested: ${orderItem.quantity}`,
         product.id,
-        product.name
+        product.productName
       );
     }
 
     // Ensure stock will not become negative (double-check)
-    const newStockQuantity = product.stock_quantity - orderItem.quantity;
+    const newStockQuantity = product.stockQuantity - orderItem.quantity;
     if (newStockQuantity < 0) {
       throw new InventoryError(
-        `Stock quantity cannot be negative for product "${product.name}"`,
+        `Stock quantity cannot be negative for product "${product.productName}"`,
         product.id,
-        product.name
+        product.productName
       );
     }
   }
@@ -167,24 +167,24 @@ function updateInventoryCore(products: ProductsArray, orderItems: OrderItem[]): 
     }
 
     // Calculate new values
-    const newStockQuantity = product.stock_quantity - update.quantity;
-    const newQuantitySold = product.quantity_sold + update.quantity;
+    const newStockQuantity = product.stockQuantity - update.quantity;
+    const newQuantitySold = product.quantitySold + update.quantity;
 
     // Final validation: ensure stock is never negative
     if (newStockQuantity < 0) {
       throw new InventoryError(
-        `Stock quantity would become negative for product "${product.name}"`,
+        `Stock quantity would become negative for product "${product.productName}"`,
         product.id,
-        product.name
+        product.productName
       );
     }
 
     // Build updated product
     const updatedProduct: Product = {
       ...product,
-      stock_quantity: newStockQuantity,
-      quantity_sold: newQuantitySold,
-      updated_at: new Date().toISOString(),
+      stockQuantity: newStockQuantity,
+      quantitySold: newQuantitySold,
+      updatedAt: new Date().toISOString(),
     };
 
     return updatedProduct;
@@ -331,7 +331,7 @@ export function initializeProductsStorage(products: Product[]): void {
  * @returns true if product is out of stock, false otherwise
  */
 export function isProductOutOfStock(product: Product): boolean {
-  return product.stock_quantity === 0;
+  return product.stockQuantity === 0;
 }
 
 /**
@@ -340,7 +340,7 @@ export function isProductOutOfStock(product: Product): boolean {
  * @returns "Out of Stock" if stock is 0, otherwise "In Stock"
  */
 export function getStockStatusText(product: Product): 'In Stock' | 'Out of Stock' {
-  return product.stock_quantity === 0 ? 'Out of Stock' : 'In Stock';
+  return product.stockQuantity === 0 ? 'Out of Stock' : 'In Stock';
 }
 
 /**
@@ -349,6 +349,6 @@ export function getStockStatusText(product: Product): 'In Stock' | 'Out of Stock
  * @returns true if Add to Cart should be disabled (out of stock), false otherwise
  */
 export function shouldDisableAddToCart(product: Product): boolean {
-  return product.stock_quantity === 0;
+  return product.stockQuantity === 0;
 }
 

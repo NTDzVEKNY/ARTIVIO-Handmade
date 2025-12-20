@@ -4,41 +4,38 @@ import { useState, useEffect } from 'react';
 import Image from "next/image";
 import Link from "next/link";
 
-import { Product } from '~/types';
-
-interface ProductWithCategory extends Product {
-  categoryName?: string;
-}
+import { axiosClient as apiClient } from '@/lib/axios';
+import { Product, ProductResponse } from '@/types';
 
 export default function FeaturedProducts() {
-  const [products, setProducts] = useState<ProductWithCategory[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null); // Thêm state error
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/products?size=0').then(res => res.json()),
-      fetch('/api/categories').then(res => res.json())
-    ])
-    .then(([productsData, categoriesData]) => {
-      const productList = Array.isArray(productsData) ? productsData : (productsData.content ?? []);
-      const normalized = Array.isArray(productList) ? productList : [];
-      
-      const categoryMap = new Map(categoriesData.map((cat: any) => [cat.id, cat.name]));
+    const fetchFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // 2. Dùng apiClient và yêu cầu backend sắp xếp sẵn
+        const response = await apiClient.get<ProductResponse>('/products', {
+          params: {
+            page: 0,
+            size: 8,
+            // Tạm thời vô hiệu hóa 'sort' để kiểm tra nguyên nhân lỗi 400.
+            // sort: 'quantitySold,desc',
+          },
+        });
+        setProducts(response.data.content || []);
+      } catch (err) {
+        console.error('Failed to fetch featured products:', err);
+        setError('Không thể tải sản phẩm nổi bật.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const productsWithCategory = normalized.map(product => ({
-        ...product,
-        categoryName: categoryMap.get(product.category_id)
-      }));
-
-      productsWithCategory.sort((a, b) => (Number(b.quantity_sold ?? 0) - Number(a.quantity_sold ?? 0)));
-      setProducts(productsWithCategory.slice(0, 8));
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error("Failed to fetch featured products:", err);
-      setProducts([]);
-      setLoading(false);
-    });
+    fetchFeaturedProducts();
   }, []);
 
   return (
@@ -51,13 +48,17 @@ export default function FeaturedProducts() {
         <Link href="/shop/products" className="text-sm font-medium transition-colors" style={{ color: '#D96C39' }}>Xem tất cả →</Link>
       </div>
       
-      {loading ? (
+      {loading && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="rounded-xl h-64 animate-pulse" style={{ backgroundColor: '#E8D5B5' }}></div>
           ))}
         </div>
-      ) : (
+      )}
+      {error && !loading && (
+        <div className="text-center text-red-500">{error}</div>
+      )}
+      {!loading && !error && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
           {products.map((product, idx) => (
             <Link
@@ -73,12 +74,12 @@ export default function FeaturedProducts() {
               }}>
                 <div className="relative w-full h-44 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
                   <Image
-                    src={product.image || 'https://placehold.co/600x400?text=No+Image'}
-                    alt={product.name}
+                    src={product.image ? (product.image.startsWith('http') ? product.image : `https://${product.image}`) : 'https://placehold.co/600x400?text=No+Image'}
+                    alt={product.productName}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  {product.quantity_sold && product.quantity_sold > 0 && (
+                  {product.quantitySold && product.quantitySold > 0 && (
                     <div className="absolute top-3 right-3 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md" style={{ backgroundColor: '#D96C39' }}>
                       ⭐ Bán chạy
                     </div>
@@ -90,7 +91,7 @@ export default function FeaturedProducts() {
                     {product.categoryName ?? ''}
                   </div>
                   <h3 className="text-sm font-semibold mb-2 line-clamp-2 group-hover:font-bold transition-all" style={{ color: '#3F2E23' }}>
-                    {product.name}
+                    {product.productName}
                   </h3>
                   <p className="text-xs mt-1 line-clamp-2 mb-4 flex-grow" style={{ color: '#6B4F3E' }}>
                     {product.description}
