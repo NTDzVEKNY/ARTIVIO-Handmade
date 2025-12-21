@@ -7,28 +7,16 @@ import Link from 'next/link';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
 import { useCart } from '@/contexts/CartContext';
-import type { Product, ProductResponse } from '@/types'; // Use the official Product type
-import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory'; // Giữ lại helper functions
-import { axiosClient as apiClient } from '@/lib/axios'; // Sử dụng axiosClient
-
-// Kiểu dữ liệu này đại diện cho những gì API /products/{id} thực sự trả về.
-// Nó khác với kiểu Product chung.
-type ProductDetailApiResponse = {
-  id: number;
-  name: string; // Lưu ý: API trả về 'name', không phải 'productName'
-  description: string | null;
-  price: number;
-  image: string | null;
-  stockQuantity: number;
-  categoryName: string;
-};
+import type { Product, Category } from '@/types'; // Use the official Product type
+import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const productId = Array.isArray(params.id) ? Number(params.id[0]) : Number(params.id);
+  const productId = Number(params.id);
   const { addItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [categoryName, setCategoryName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -44,57 +32,36 @@ export default function ProductDetailPage() {
     setLoading(true);
     setError(null);
 
-    const fetchData = async () => {
-      try {
-        // Do API chi tiết sản phẩm (/products/{id}) trả về thiếu dữ liệu (quantitySold, categoryId),
-        // chúng ta phải thực hiện một giải pháp tạm thời ở frontend:
-        // 1. Gọi API chi tiết để lấy thông tin cơ bản.
-        // 2. Gọi API danh sách để tìm và bổ sung các trường còn thiếu.
-        // CẢNH BÁO: Đây là một giải pháp không hiệu quả về mặt hiệu năng.
-        // Cách làm đúng đắn nhất là sửa lại API backend để trả về đầy đủ dữ liệu trong một lần gọi.
-
-        const [detailResponse, listResponse] = await Promise.all([
-          apiClient.get<ProductDetailApiResponse>(`/products/${productId}`),
-          apiClient.get<ProductResponse>('/products', { params: { page: 0, size: 2000 } }) // Lấy danh sách lớn để tìm
-        ]);
-
-        const detailData = detailResponse.data;
-        if (!detailData) {
-          throw new Error("Không tìm thấy chi tiết sản phẩm.");
+    fetch(`/api/products/${productId}`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Không tìm thấy sản phẩm (mã lỗi: ${res.status})`);
         }
-
-        const productFromList = listResponse.data.content?.find(p => p.id === productId);
-
-        // Hợp nhất dữ liệu từ 2 API call để tạo ra một đối tượng Product hoàn chỉnh
-        const completeProduct: Product = {
-          id: detailData.id,
-          productName: detailData.name, // Ánh xạ 'name' từ API chi tiết sang 'productName'
-          description: detailData.description,
-          price: detailData.price,
-          image: detailData.image,
-          stockQuantity: detailData.stockQuantity,
-          categoryName: detailData.categoryName,
-          quantitySold: productFromList?.quantitySold ?? 0, // Lấy từ API danh sách
-          categoryId: productFromList?.categoryId ?? 0, // Lấy từ API danh sách
-          status: productFromList?.status ?? 'ACTIVE', // Lấy từ API danh sách
-        };
-
-        setProduct(completeProduct);
+        return res.json() as Promise<Product>;
+      })
+      .then((data) => {
+        setProduct(data);
         setQuantity(1);
-      } catch (err: unknown) {
+        if (data.category_id) {
+          fetch('/api/categories')
+            .then((res) => res.json())
+            .then((cats: Category[]) => {
+              const cat = cats.find((c) => c.id === data.category_id);
+              if (cat) setCategoryName(cat.name);
+            })
+            .catch((err) => console.error('Failed to fetch categories', err));
+        }
+      })
+      .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Không tải được sản phẩm');
         console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+      })
+      .finally(() => setLoading(false));
   }, [productId]);
 
   const increase = () =>
     setQuantity((q) => {
-      const max = product?.stockQuantity ?? 9999;
+      const max = product?.stock_quantity ?? 9999;
       return Math.min(max, q + 1);
     });
   const decrease = () => setQuantity((q) => Math.max(1, q - 1));
@@ -106,7 +73,7 @@ export default function ProductDetailPage() {
       return;
     }
     const min = 1;
-    const max = product?.stockQuantity ?? 9999;
+    const max = product?.stock_quantity ?? 9999;
     const clamped = Math.max(min, Math.min(max, Math.floor(parsed)));
     setQuantity(clamped);
   };
@@ -116,10 +83,10 @@ export default function ProductDetailPage() {
 
     addItem({
       id: product.id,
-      productName: product.productName,
+      productName: product.name,
       price: String(product.price ?? 0),
       image: product.image || '/hero-handmade.jpg',
-      stockQuantity: product.stockQuantity,
+      stockQuantity: product.stock_quantity,
       quantity: quantity,
     });
 
@@ -162,8 +129,8 @@ export default function ProductDetailPage() {
               <div className="relative rounded-2xl overflow-hidden shadow-lg">
                 <div className="w-full h-[420px] relative bg-gray-100">
                   <Image
-                    src={product.image ? (product.image.startsWith('http') ? product.image : `https://${product.image}`) : '/hero-handmade.jpg'}
-                    alt={product.productName ?? 'Product Image'}
+                    src={product.image || '/hero-handmade.jpg'}
+                    alt={product.name ?? 'Product Image'}
                     fill
                     className="object-cover"
                     priority
@@ -179,7 +146,7 @@ export default function ProductDetailPage() {
 
             {/* Details Section */}
             <div className="space-y-6">
-              <h1 className="text-2xl font-bold text-gray-900">{product.productName}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
               <div className="flex items-center gap-4">
                 <div className="text-xl font-extrabold text-[#0f172a]">
                   ₫{(product.price || 0).toLocaleString('vi-VN')}
@@ -210,7 +177,7 @@ export default function ProductDetailPage() {
                     type="number"
                     inputMode="numeric"
                     min={1}
-                    max={product.stockQuantity ?? 9999}
+                    max={product.stock_quantity ?? 9999}
                     value={quantity}
                     onChange={(e) => onQuantityChange(e.target.value)}
                     className="w-20 text-center px-3 py-2 outline-none appearance-none bg-white"
@@ -221,7 +188,7 @@ export default function ProductDetailPage() {
                     onClick={increase}
                     aria-label="Tăng số lượng"
                     className="px-4 py-2 bg-gray-100 disabled:opacity-50"
-                    disabled={quantity >= (product.stockQuantity ?? 9999) || isProductOutOfStock(product)}
+                    disabled={quantity >= (product.stock_quantity ?? 9999) || isProductOutOfStock(product)}
                   >
                     +
                   </button>
@@ -236,7 +203,7 @@ export default function ProductDetailPage() {
                     <button
                       className={`border-2 border-orange-500 bg-white text-orange-600 px-6 py-3 rounded-full font-semibold shadow-sm hover:bg-orange-50 transition-all duration-300 relative ${addToCartSuccess ? 'bg-green-50 border-green-500 text-green-600' : ''}`}
                       onClick={handleAddToCart}
-                      disabled={product.stockQuantity !== undefined && product.stockQuantity <= 0}
+                      disabled={product.stock_quantity !== undefined && product.stock_quantity <= 0}
                     >
                       {addToCartSuccess ? (
                         <span className="flex items-center gap-2">
@@ -281,16 +248,15 @@ export default function ProductDetailPage() {
               
               {/* Meta Info */}
               <div className="text-sm text-gray-500">
-                Kho: {product.stockQuantity ?? '—'} · Đã bán: {product.quantitySold ?? '—'}
+                Kho: {product.stock_quantity ?? '—'} · Đã bán: {product.quantity_sold ?? '—'}
               </div>
 
               {/* Category Link */}
-              {/* 2. Sử dụng trực tiếp product.categoryName */}
-              {product.categoryName && product.categoryId && (
+              {categoryName && product.category_id && (
                  <div className="pt-4 border-t">
                     <h3 className="font-medium mb-2">Danh mục</h3>
-                    <Link href={`/shop/products?categoryId=${product.categoryId}`} className="text-sm text-[#0f172a] hover:underline">
-                      {product.categoryName}
+                    <Link href={`/shop/products?categoryId=${product.category_id}`} className="text-sm text-[#0f172a] hover:underline">
+                      {categoryName}
                     </Link>
                   </div>
               )}
