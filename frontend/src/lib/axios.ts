@@ -1,14 +1,13 @@
 import axios from "axios";
 
-// Sử dụng biến môi trường đã được định nghĩa trong file .env.local
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080/api";
 
 export const axiosClient = axios.create({
     baseURL: BASE_URL,
     headers: { "Content-Type": "application/json" },
 });
 
-// Instance này dành cho các request cần xác thực, sẽ được hook useAxiosAuth gắn interceptor vào
+// Tạo instance riêng cho Auth để attach interceptors
 export const axiosAuth = axios.create({
     baseURL: BASE_URL,
     headers: { "Content-Type": "application/json" },

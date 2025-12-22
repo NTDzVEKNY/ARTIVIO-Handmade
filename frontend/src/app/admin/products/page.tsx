@@ -1,9 +1,10 @@
 import { ProductsClient } from '@/components/admin/products/ProductsClient';
-import { getProducts } from '@/services/api';
+import { db } from '@/app/api/_lib/mockData';
 
 const ProductsPage = async () => {
-  const productsResponse = await getProducts({});
-  const products = productsResponse.content;
+  // Trong thực tế, bạn sẽ fetch dữ liệu từ API của mình
+  // ở đây chúng ta dùng mock data để minh họa
+  const products = db.products;
 
   return <ProductsClient data={products} />;
 };
