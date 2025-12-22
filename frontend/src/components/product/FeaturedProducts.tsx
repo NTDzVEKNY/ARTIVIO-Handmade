@@ -74,7 +74,7 @@ export default function FeaturedProducts() {
               }}>
                 <div className="relative w-full h-44 overflow-hidden" style={{ backgroundColor: '#E8D5B5' }}>
                   <Image
-                    src={product.image ? (product.image.startsWith('http') ? product.image : `https://${product.image}`) : 'https://placehold.co/600x400?text=No+Image'}
+                    src={product.image ? (product.image.startsWith('//') ? `https:${product.image}` : product.image) : 'https://placehold.co/600x400?text=No+Image'}
                     alt={product.productName}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-500"
