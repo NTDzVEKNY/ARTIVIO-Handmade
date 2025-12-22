@@ -22,6 +22,9 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Value("${successVerificationUrl}")
+    private String loginUrl;
+
     public void sendEmail(String to, String subject, String body) {
         // Fallback for simple text emails if needed
         try {
@@ -57,6 +60,30 @@ public class EmailService {
         } catch (Exception e) {
             log.error("Failed to send HTML OTP email to {}", to, e);
             throw new RuntimeException(e); // Rethrow to catch in listener for detailed logging if preferred
+        }
+    }
+
+    public void sendSuccessVerificationEmail(String to) {
+        try {
+            Context context = new Context();
+            context.setVariable("loginUrl", loginUrl);
+
+            String htmlContent = templateEngine.process("account_verified", context);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("Artivio - Account Verified");
+            helper.setText(htmlContent, true); // true = isHtml
+
+            mailSender.send(message);
+            log.info("HTML Success Verification Email sent to: {}", to);
+
+        } catch (Exception e) {
+            log.error("Failed to send HTML Success Verification email to {}", to, e);
+            throw new RuntimeException(e);
         }
     }
 }

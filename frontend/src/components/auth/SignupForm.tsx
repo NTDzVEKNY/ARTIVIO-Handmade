@@ -35,16 +35,7 @@ export default function SignupForm({onRegisterSuccess}: SignupFormProps) {
 
         setIsLoading(true);
         try {
-            const tempData = {username, email};
-            sessionStorage.setItem('temp_register_data', JSON.stringify(tempData));
-
-            console.log(">>> Register API called with body:", {
-                name: username,
-                email: email,
-                password: password,
-                confirmPassword: confirmPassword,
-            });
-
+            // --- Call API Register ---
             const response = await axiosClient.post('/register', {
                 name: username,
                 email: email,
@@ -59,10 +50,9 @@ export default function SignupForm({onRegisterSuccess}: SignupFormProps) {
             if (isAxiosError(err) && err.response) {
                 // err.response.data chính là body JSON bạn return từ Next.js
                 console.log(">>> Register error:", err.response.data);
-                setError(err.response.data.message || 'Đã có lỗi xảy ra từ máy chủ.');
+                setError(err.response.data.error || 'Đã có lỗi xảy ra từ máy chủ.');
             } else {
                 console.log(">>> Register error:", err);
-                // Lỗi không phải từ response (ví dụ: mất mạng, lỗi code frontend)
                 const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại.';
                 setError(message);
             }

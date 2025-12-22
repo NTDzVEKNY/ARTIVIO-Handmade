@@ -10,6 +10,8 @@ import com.artivio.backend.utils.EmailService.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Random;
+
 @Service
 @RequiredArgsConstructor
 public class VerifyService {
@@ -22,8 +24,13 @@ public class VerifyService {
                 .orElseThrow(() -> new RuntimeException("Mail chưa được đăng ký!"));
 
         if (otp.getExpiresAt().isBefore(java.time.LocalDateTime.now())) {
-            otpRepository.delete(otp);
-            throw new RuntimeException("Mã xác thực đã hết hạn!");
+            otp.setCode(String.valueOf(new Random().nextInt(900000) + 100000));
+            otp.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(5));
+            emailService.sendOtpEmail(otp.getEmail(), otp.getCode());
+
+            otpRepository.save(otp);
+
+            throw new RuntimeException("Mã xác thực đã hết hạn! Chúng tôi đã gửi cho bạn mã mới!");
         }
 
         if (!otp.getCode().equals(request.getCode())) {
@@ -31,7 +38,7 @@ public class VerifyService {
         }
 
         otpRepository.delete(otp);
-        emailService.sendEmail(request.getEmail(), "Artivio - Xác thực thành công", "Xác thực thành công người dùng" + otp.getName());
+        emailService.sendSuccessVerificationEmail(otp.getEmail());
 
         User user = new User();
         user.setName(otp.getName());
