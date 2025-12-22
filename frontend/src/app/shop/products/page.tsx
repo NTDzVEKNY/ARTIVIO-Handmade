@@ -24,7 +24,7 @@ const categoryIcons: Record<string, string> = {
   "Quà tặng": "🎁",
   "Thiệp handmade": "💌",
   "Phụ kiện & nguyên liệu": "🧵",
-  "Vải decor": "🎨",
+  "Vải decor": "🧣",
   "Ví & passport": "💼",
   "Limited": "🌟",
 };
