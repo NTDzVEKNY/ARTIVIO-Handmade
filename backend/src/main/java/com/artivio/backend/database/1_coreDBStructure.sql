@@ -88,3 +88,14 @@ CREATE TABLE order_items (
                              FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
                              FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
+
+-- 8. OTPs
+CREATE TABLE otps (
+                      id BIGINT NOT NULL AUTO_INCREMENT,
+                      name VARCHAR(255),
+                      email VARCHAR(255),
+                      password VARCHAR(255),
+                      code VARCHAR(255),
+                      expires_at DATETIME,
+                      PRIMARY KEY (id)
+);

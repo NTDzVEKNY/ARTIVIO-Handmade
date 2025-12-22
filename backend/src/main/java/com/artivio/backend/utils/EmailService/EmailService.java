@@ -1,4 +1,4 @@
-package com.artivio.backend.modules.notification.service;
+package com.artivio.backend.utils.EmailService;
 
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -51,7 +51,7 @@ public class EmailService {
 
             helper.setFrom(fromEmail);
             helper.setTo(to);
-            helper.setSubject("ABC Bank - Verification Code");
+            helper.setSubject("Artivio - Verification Code");
             helper.setText(htmlContent, true); // true = isHtml
 
             mailSender.send(message);

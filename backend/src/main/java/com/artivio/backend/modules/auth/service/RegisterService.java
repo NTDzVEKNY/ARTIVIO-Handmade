@@ -2,22 +2,26 @@ package com.artivio.backend.modules.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import com.artivio.backend.modules.auth.dto.response.RegisterResponse;
-import com.artivio.backend.modules.auth.model.Role;
-import com.artivio.backend.modules.auth.model.User;
+import com.artivio.backend.modules.auth.model.Otp;
 import com.artivio.backend.modules.auth.repository.UserRepository;
+import com.artivio.backend.modules.auth.repository.OtpRepository;
+import com.artivio.backend.utils.EmailService.EmailService;
 import com.artivio.backend.modules.auth.dto.request.RegisterRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Random;
+
 @Service
 @RequiredArgsConstructor
 public class RegisterService {
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+    private final OtpRepository otpRepository;
 
-    public RegisterResponse register(RegisterRequest req) {
+    public String register(RegisterRequest req) {
 
         // Check email duplicate
         if (userRepository.existsByEmail(req.getEmail())) {
@@ -27,20 +31,16 @@ public class RegisterService {
             throw new RuntimeException("Password và Confirm Password phải giống nhau");
         }
 
-        User user = new User();
-        user.setName(req.getName());
-        user.setEmail(req.getEmail());
-        user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setRole(Role.USER); // mặc định USER
+        Otp otp = new Otp();
+        otp.setName(req.getName());
+        otp.setEmail(req.getEmail());
+        otp.setPassword(passwordEncoder.encode(req.getPassword()));
+        otp.setCode(String.valueOf(new Random().nextInt(900000) + 100000));
 
-        User saved = userRepository.save(user);
+        otpRepository.save(otp);
 
-        return new RegisterResponse(
-                saved.getId(),
-                saved.getName(),
-                saved.getEmail(),
-                saved.getRole(),
-                saved.getCreatedAt()
-        );
+        emailService.sendOtpEmail(req.getEmail(), otp.getCode());
+
+        return "OTP đã được gửi đến email của bạn.";
     }
 }

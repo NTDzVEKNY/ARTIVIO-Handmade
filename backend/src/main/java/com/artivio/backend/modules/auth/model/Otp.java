@@ -1,4 +1,4 @@
-package com.artivio.backend.modules.notification.model;
+package com.artivio.backend.modules.auth.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,6 +15,9 @@ public class Otp {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "name")
+    private String name;
 
     @Column(name = "email")
     private String email;
