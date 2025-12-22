@@ -363,8 +363,8 @@ function ProductsPageContent() {
                         {/* Image Container */}
                         <div className="relative w-full h-48 overflow-hidden pointer-events-none" style={{ backgroundColor: '#E8D5B5' }}>
                           <Image
-                            src={product.image || '/artivio-logo.png'}
-                            alt={product.name}
+                            src={product.image ? (product.image.startsWith('//') ? `https:${product.image}` : product.image) : '/artivio-logo.png'}
+                            alt={product.productName}
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-500"
                           />

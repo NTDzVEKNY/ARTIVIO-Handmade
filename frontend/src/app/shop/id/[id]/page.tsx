@@ -129,8 +129,8 @@ export default function ProductDetailPage() {
               <div className="relative rounded-2xl overflow-hidden shadow-lg">
                 <div className="w-full h-[420px] relative bg-gray-100">
                   <Image
-                    src={product.image || '/hero-handmade.jpg'}
-                    alt={product.name ?? 'Product Image'}
+                    src={product.image ? (product.image.startsWith('//') ? `https:${product.image}` : product.image) : '/hero-handmade.jpg'}
+                    alt={product.productName ?? 'Product Image'}
                     fill
                     className="object-cover"
                     priority
