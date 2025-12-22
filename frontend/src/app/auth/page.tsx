@@ -9,7 +9,6 @@ import SignupForm from '@/components/auth/SignupForm';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import VerificationCodeForm from '@/components/auth/VerificationCodeForm';
 import ResetPasswordForm from '@/components/auth/ResetPasswordForm';
-import { fetchApi } from '@/services/api';
 
 export default function AuthPage() {
   const searchParams = useSearchParams();
