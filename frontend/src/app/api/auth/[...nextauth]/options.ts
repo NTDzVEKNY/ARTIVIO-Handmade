@@ -36,6 +36,8 @@ export const authOptions: NextAuthOptions = {
 
                     const loginResponse = await res.json();
 
+
+
                     if (!res.ok) {
                         throw new Error(loginResponse.error || "Đăng nhập thất bại");
                     }
@@ -50,7 +52,12 @@ export const authOptions: NextAuthOptions = {
                     };
                 } catch (error) {
                     console.error("Login error:", error);
-                    return null;
+
+                    if (error instanceof Error) {
+                        throw new Error(error.message ||"Đăng nhập thất bại");
+                    }
+
+                    throw new Error( "Đã xảy ra lỗi không xác định");
                 }
             },
         }),
