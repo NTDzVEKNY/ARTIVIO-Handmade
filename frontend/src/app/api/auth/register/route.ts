@@ -10,6 +10,7 @@ export async function POST(request: Request) {
 		const body = await request.json();
 		const { username, email, password, confirmPassword } = body;
 
+        console.log(">>> Register API called with body:", body);
 		// --- Logic mô phỏng y hệt RegisterService.java ---
 
 		// 1. Kiểm tra các trường bắt buộc
