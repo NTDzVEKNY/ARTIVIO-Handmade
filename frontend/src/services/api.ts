@@ -7,10 +7,7 @@
  * @returns Promise chứa dữ liệu JSON trả về
  */
 export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const isServer = typeof window === 'undefined';
-    const baseUrl = isServer 
-      ? process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
-      : process.env.NEXT_PUBLIC_API_URL || '/api';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
       
     const url = `${baseUrl}${endpoint}`;
 

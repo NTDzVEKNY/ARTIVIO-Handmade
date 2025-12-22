@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import {axiosClient} from "@/lib/axios";
+import {isAxiosError} from "axios";
 
 interface VerificationCodeFormProps {
   email: string;
@@ -21,25 +23,28 @@ export default function VerificationCodeForm({ email, onVerifySuccess, onBack }:
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
+      // --- Call API Verify ---
+      const response = await axiosClient.post('/verifyAccount', {
+        email: email,
+        code: code,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Đã có lỗi xảy ra');
-      }
+      console.log(">>> Verify response:", response);
       
       setSuccessMessage('Xác thực thành công! Đang chuyển hướng đến trang đăng nhập...');
       setTimeout(() => {
         onVerifySuccess();
       }, 2000);
 
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Lỗi không xác định');
+    } catch (err) {
+        if (isAxiosError(err) && err.response) {
+            console.log(">>> Register error:", err.response.data);
+            setError(err.response.data.error || 'Đã có lỗi xảy ra từ máy chủ.');
+        } else {
+            console.log(">>> Register error:", err);
+            const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+            setError(message);
+        }
     } finally {
       setIsLoading(false);
     }
