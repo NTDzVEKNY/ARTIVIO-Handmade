@@ -11,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.mail.internet.MimeMessage;
 
-
-
 @Service
 @RequiredArgsConstructor
 @Slf4j

@@ -3,7 +3,8 @@
 import React, {useState} from 'react';
 import Image from 'next/image';
 import {signIn} from 'next-auth/react';
-import {fetchApi} from '@/services/api';
+import { axiosClient } from "@/lib/axios";
+import { isAxiosError } from "axios";
 
 interface SignupFormProps {
     onRegisterSuccess: (email: string) => void;
@@ -34,14 +35,37 @@ export default function SignupForm({onRegisterSuccess}: SignupFormProps) {
 
         setIsLoading(true);
         try {
-            const tempData = {username, email, password};
+            const tempData = {username, email};
             sessionStorage.setItem('temp_register_data', JSON.stringify(tempData));
+
+            console.log(">>> Register API called with body:", {
+                name: username,
+                email: email,
+                password: password,
+                confirmPassword: confirmPassword,
+            });
+
+            const response = await axiosClient.post('/register', {
+                name: username,
+                email: email,
+                password: password,
+                confirmPassword: confirmPassword,
+            });
+
+            console.log(">>> Register response:", response);
 
             onRegisterSuccess(email);
         } catch (err) {
-            // Kiểm tra kiểu của lỗi để đảm bảo an toàn
-            const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại.';
-            setError(message);
+            if (isAxiosError(err) && err.response) {
+                // err.response.data chính là body JSON bạn return từ Next.js
+                console.log(">>> Register error:", err.response.data);
+                setError(err.response.data.message || 'Đã có lỗi xảy ra từ máy chủ.');
+            } else {
+                console.log(">>> Register error:", err);
+                // Lỗi không phải từ response (ví dụ: mất mạng, lỗi code frontend)
+                const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+                setError(message);
+            }
         } finally {
             setIsLoading(false);
         }

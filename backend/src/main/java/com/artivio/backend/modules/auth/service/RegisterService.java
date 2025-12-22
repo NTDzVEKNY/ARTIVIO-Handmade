@@ -36,6 +36,7 @@ public class RegisterService {
         otp.setEmail(req.getEmail());
         otp.setPassword(passwordEncoder.encode(req.getPassword()));
         otp.setCode(String.valueOf(new Random().nextInt(900000) + 100000));
+        otp.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(5));
 
         otpRepository.save(otp);
 
