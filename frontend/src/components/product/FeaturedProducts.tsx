@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from "next/image";
 import Link from "next/link";
 
-import { Product } from '~/types';
+import { fetchApi } from '@/services/api';
+import { Product } from '@/types';
 
 interface ProductWithCategory extends Product {
   categoryName?: string;
@@ -16,8 +17,8 @@ export default function FeaturedProducts() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/products?size=0').then(res => res.json()),
-      fetch('/api/categories').then(res => res.json())
+      fetchApi<Product[] | { content: Product[] }>('/public/products?size=0'),
+      fetchApi<any[]>('/public/category')
     ])
     .then(([productsData, categoriesData]) => {
       const productList = Array.isArray(productsData) ? productsData : (productsData.content ?? []);

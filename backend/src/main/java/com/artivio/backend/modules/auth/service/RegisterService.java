@@ -28,7 +28,7 @@ public class RegisterService {
         }
 
         User user = new User();
-        user.setName(req.getName());
+        user.setUsername(req.getUsername());
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole(Role.USER); // mặc định USER
@@ -37,7 +37,7 @@ public class RegisterService {
 
         return new RegisterResponse(
                 saved.getId(),
-                saved.getName(),
+                saved.getUsername(),
                 saved.getEmail(),
                 saved.getRole(),
                 saved.getCreatedAt()

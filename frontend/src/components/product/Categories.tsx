@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 
-import { Category, Product } from '~/types';
+import { Category, Product } from '@/types';
+import { getCategories, getProducts } from '@/services/api';
 
 interface EnrichedCategory extends Category {
   soldCount?: number;
@@ -24,16 +25,13 @@ export default function Categories() {
   const [categories, setCategories] = useState<EnrichedCategory[]>([]);
 
   useEffect(() => {
-    Promise.all([fetch('/api/categories'), fetch('/api/products?size=0')])
-      .then(async ([cRes, pRes]) => {
-        const catsRaw = await cRes.json();
-        const productsRaw = await pRes.json();
-
+    Promise.all([getCategories(), getProducts({})])
+      .then(async ([catsRaw, productsData]) => {
         const cats: Category[] = Array.isArray(catsRaw) ? catsRaw : [];
 
         let products: Product[] = [];
-        if (productsRaw && typeof productsRaw === 'object' && 'content' in productsRaw && Array.isArray((productsRaw as any).content)) {
-          products = (productsRaw as any).content;
+        if (productsData && productsData.content) {
+          products = productsData.content;
         }
 
         const soldMap = new Map<number, number>();

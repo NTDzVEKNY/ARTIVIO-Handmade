@@ -9,10 +9,11 @@ import Footer from '@/components/common/Footer';
 import { useCart } from '@/contexts/CartContext';
 import type { Product, Category } from '@/types'; // Use the official Product type
 import { isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
+import { getProductById, getCategories } from '@/services/api'; // Import backendApi functions
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const productId = Number(params.id);
+  const productId = Array.isArray(params.id) ? Number(params.id[0]) : Number(params.id);
   const { addItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -32,31 +33,26 @@ export default function ProductDetailPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/products/${productId}`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Không tìm thấy sản phẩm (mã lỗi: ${res.status})`);
-        }
-        return res.json() as Promise<Product>;
-      })
-      .then((data) => {
-        setProduct(data);
+    const fetchData = async () => {
+      try {
+        const productData = await getProductById(String(productId)); // Fetch product
+        setProduct(productData);
         setQuantity(1);
-        if (data.category_id) {
-          fetch('/api/categories')
-            .then((res) => res.json())
-            .then((cats: Category[]) => {
-              const cat = cats.find((c) => c.id === data.category_id);
-              if (cat) setCategoryName(cat.name);
-            })
-            .catch((err) => console.error('Failed to fetch categories', err));
+
+        if (productData.category_id) {
+          const categoriesData = await getCategories(); // Fetch categories
+          const cat = categoriesData.find((c) => c.id === productData.category_id);
+          if (cat) setCategoryName(cat.name);
         }
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Không tải được sản phẩm');
         console.error(err);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [productId]);
 
   const increase = () =>
@@ -229,10 +225,10 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {/* Custom Order Button */}
+              {/* Custom Request Button */}
               <div className="pt-2">
-                <button
-                  onClick={() => alert('Đặt làm riêng (mock)')}
+                <Link
+                  href={`/custom-request/${productId}`}
                   className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-orange-600 to-yellow-500 text-white px-6 py-3 rounded-full font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -242,8 +238,8 @@ export default function ProductDetailPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span>Đặt làm riêng</span>
-                </button>
+                  <span>Yêu cầu tùy chỉnh</span>
+                </Link>
               </div>
               
               {/* Meta Info */}

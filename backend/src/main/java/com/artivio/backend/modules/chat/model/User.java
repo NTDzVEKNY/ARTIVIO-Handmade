@@ -31,7 +31,7 @@ public class User implements UserDetails{
     private Long id;
 
     @Column(name = "name")
-    private String name;
+    private String username;
 
     @Column(name = "email")
     private String email;

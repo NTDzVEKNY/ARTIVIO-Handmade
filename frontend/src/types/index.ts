@@ -59,3 +59,59 @@ export type Order = {
 	created_at: string;
 	updated_at: string;
 };
+
+export type CustomRequest = {
+	id: number;
+	product_id: number;
+	customer_id: number;
+	artisan_id: number;
+	chat_id: number;
+	title: string;
+	description: string;
+	custom_options: {
+		color?: string;
+		size?: string;
+		material?: string;
+	};
+	expected_price?: number;
+	deadline?: string;
+	reference_images: string[]; // URLs or base64 previews
+	note?: string;
+	status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+	created_at: string;
+	updated_at: string;
+};
+
+export type Chat = {
+	id: number;
+	custom_request_id: number;
+	customer_id: number;
+	artisan_id: number;
+	status: 'open' | 'closed';
+	created_at: string;
+	updated_at: string;
+};
+
+export type Message = {
+	id: number;
+	chat_id: number;
+	sender_id: number;
+	sender_type: 'customer' | 'artisan';
+	content: string;
+	image_url?: string;
+	created_at: string;
+};
+
+export type Artisan = {
+	id: number;
+	name: string;
+	email: string;
+	avatar?: string;
+};
+
+export type User = {
+	id: number;
+	name: string;
+	email: string;
+	avatar?: string;
+};

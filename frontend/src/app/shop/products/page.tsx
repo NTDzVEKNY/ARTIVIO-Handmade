@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from "next/image";
 import Link from "next/link";
@@ -37,6 +37,7 @@ const SORT_OPTIONS = [
 
 import { Product, Category } from '@/types';
 import { initializeProductsStorage, isProductOutOfStock, getStockStatusText } from '@/lib/inventory';
+import { getProducts, getCategories, ProductResponse } from '@/services/api';
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
@@ -46,121 +47,109 @@ function ProductsPageContent() {
   const priceRangeParam = searchParams.get('priceRange') || 'all';
   const sortParam = searchParams.get('sort') || 'featured';
 
+  const qParam = searchParams.get('q') || '';
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(qParam);
   const [priceRange, setPriceRange] = useState<string>(priceRangeParam);
   const [sortBy, setSortBy] = useState<string>(sortParam);
-  const [page, setPage] = useState<number>(0);
-  const pageSize = 24;
+  const [page, setPage] = useState<number>(0); // 0-indexed page
+  const [totalElements, setTotalElements] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const pageSize = 24; // Constant page size
   const { addItem } = useCart();
 
-  const filteredProducts = products
-    .filter(product => {
-      const matchesCategory = selectedCategoryId === 'all' || product.category_id === selectedCategoryId;
-      const matchesSearch = searchQuery === '' ||
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-      const priceRange_ = PRICE_RANGES.find(r => r.id === priceRange);
-      const price = product.price || 0;
-      const matchesPrice = priceRange_ ? (price >= priceRange_.min && price <= priceRange_.max) : true;
-
-      return matchesCategory && matchesSearch && matchesPrice;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'featured') {
-        const aSold = a.quantity_sold || 0;
-        const bSold = b.quantity_sold || 0;
-        return bSold - aSold;
-      } else if (sortBy === 'price-asc') {
-        const aPrice = a.price || 0;
-        const bPrice = b.price || 0;
-        return aPrice - bPrice;
-      } else if (sortBy === 'price-desc') {
-        const aPrice = a.price || 0;
-        const bPrice = b.price || 0;
-        return bPrice - aPrice;
-      }
-      return 0;
-    });
 
   useEffect(() => {
-    const p = Number(pageParam ?? 1);
-    setPage(Number.isNaN(p) ? 0 : Math.max(0, p - 1));
-  }, [pageParam]);
+    // Initial sync with URL params
+    const parsedPage = parseInt(pageParam || "1");
+    setPage(Math.max(0, parsedPage - 1)); // 0-indexed page
+    const parsedCategoryId: number | 'all' = categoryIdParam && !isNaN(parseInt(categoryIdParam, 10))
+      ? parseInt(categoryIdParam, 10)
+      : 'all';
+    setSelectedCategoryId(parsedCategoryId);
+    setSearchQuery(qParam);
+    setPriceRange(priceRangeParam);
+    setSortBy(sortParam);
+  }, [categoryIdParam, pageParam, qParam, priceRangeParam, sortParam]);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const [productsRes, categoriesRes] = await Promise.all([
-          fetch('/api/products?size=0'),
-          fetch('/api/categories')
-        ]);
-        const productsData: Product[] | { content: Product[] } = await productsRes.json();
-        const categoriesData: Category[] = await categoriesRes.json();
-
-        const productList = 'content' in productsData && Array.isArray(productsData.content) ? productsData.content : productsData;
-        const validProducts = Array.isArray(productList) ? productList : [];
-        setProducts(validProducts);
+        const categoriesData = await getCategories();
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+
+        const currentPriceRange = PRICE_RANGES.find(r => r.id === priceRange);
         
+        const productsResponse: ProductResponse = await getProducts({
+          categoryId: selectedCategoryId,
+          q: searchQuery,
+          sort: sortBy,
+          page: page, // Backend expects 0-indexed page
+          size: pageSize,
+        });
+
+        setProducts(productsResponse.content);
+        setTotalElements(productsResponse.totalElements);
+        setTotalPages(productsResponse.totalPages);
+
         // Initialize localStorage with products from server
-        if (validProducts.length > 0) {
-          initializeProductsStorage(validProducts);
+        if (productsResponse.content.length > 0) {
+          initializeProductsStorage(productsResponse.content);
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
         setProducts([]);
         setCategories([]);
+        setTotalElements(0);
+        setTotalPages(1);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
-  }, []);
+  }, [selectedCategoryId, searchQuery, priceRange, sortBy, page, pageSize]);
 
-  useEffect(() => {
-    if (categories.length === 0) return;
+  const currentTotalElements = totalElements; // Use totalElements from backend
+  const currentTotalPages = totalPages; // Use totalPages from backend
 
-    const currentId = categoryIdParam ? parseInt(categoryIdParam, 10) : 'all';
-
-    if (currentId !== 'all' && !Number.isNaN(currentId)) {
-      const categoryExists = categories.some(c => c.id === currentId);
-      setSelectedCategoryId(categoryExists ? currentId : 'all');
-    } else {
-      setSelectedCategoryId('all');
-    }
-    setPage(0);
-    const target = currentId === 'all' ? '/shop/products' : `/shop/products?categoryId=${currentId}&page=1`;
-    router.replace(target, { scroll: false });
-  }, [categoryIdParam, categories, router]);
-
-  const totalItems = filteredProducts.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const safePage = Math.max(0, Math.min(page, totalPages - 1));
-  const start = safePage * pageSize;
-  const end = start + pageSize;
-  const pageItems = filteredProducts.slice(start, end);
-
-  const updateUrlParams = (newParams: Record<string, string>) => {
-    const params = new URLSearchParams();
-    if (selectedCategoryId !== 'all') params.set('categoryId', String(selectedCategoryId));
-    params.set('page', String(safePage + 1));
-    params.set('priceRange', priceRange);
-    params.set('sort', sortBy);
+  const updateUrlParams = useCallback((newParams: Record<string, string | number | undefined>) => {
+    const params = new URLSearchParams(window.location.search);
     
+    // Set default values if not provided
+    if (selectedCategoryId !== 'all') params.set('categoryId', String(selectedCategoryId));
+    if (searchQuery) params.set('q', searchQuery);
+    if (priceRange !== 'all') params.set('priceRange', priceRange);
+    if (sortBy !== 'featured') params.set('sort', sortBy);
+    
+    // Override with newParams
     Object.entries(newParams).forEach(([key, value]) => {
-      params.set(key, value);
+      if (value === undefined || value === '' || value === 'all' || value === 'featured') {
+        params.delete(key);
+      } else {
+        params.set(key, String(value));
+      }
     });
 
+    // Ensure page is always set based on current state, unless explicitly overridden
+    if (newParams.page === undefined) {
+        params.set('page', String(page + 1));
+    } else {
+        if (newParams.page === 1 && selectedCategoryId === 'all' && !qParam && priceRange === 'all' && sortBy === 'featured') {
+            params.delete('page'); // Clear page=1 if it's the default state
+        } else {
+            params.set('page', String(newParams.page));
+        }
+    }
+
     const queryString = params.toString();
-    router.push(`/shop/products?${queryString}`, { scroll: false });
-  };
+    router.push(`/shop/products${queryString ? `?${queryString}` : ''}`, { scroll: false });
+  }, [selectedCategoryId, searchQuery, priceRange, sortBy, page, router, qParam]);
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
@@ -216,9 +205,12 @@ function ProductsPageContent() {
             type="text"
             placeholder="Tìm kiếm sản phẩm..."
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(0);
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyUp={(e) => {
+                if (e.key === 'Enter') {
+                    setPage(0); // Reset page on new search
+                    updateUrlParams({ q: searchQuery, page: 1 });
+                }
             }}
             className="w-full px-6 py-4 pl-12 pr-4 text-sm border rounded-full focus:outline-none focus:ring-2 focus:border-transparent shadow-sm hover:shadow-md transition-all duration-300"
             style={{
@@ -248,13 +240,10 @@ function ProductsPageContent() {
             <button
               key={category.id}
               onClick={() => {
-                if (category.id === 'all') {
-                  router.push('/shop/products', { scroll: false });
-                } else {
-                  router.push(`/shop/products?categoryId=${category.id}&page=1`, { scroll: false });
-                }
-                setSelectedCategoryId(category.id as number | 'all');
-                setPage(0);
+                const newCategoryId = category.id;
+                setSelectedCategoryId(Number(newCategoryId));
+                setPage(0); // Reset page on category change
+                updateUrlParams({ categoryId: newCategoryId, page: 1 });
               }}
               className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-sm border`}
               style={{
@@ -293,8 +282,8 @@ function ProductsPageContent() {
                     checked={priceRange === range.id}
                     onChange={(e) => {
                       setPriceRange(e.target.value);
-                      setPage(0);
-                      updateUrlParams({ priceRange: e.target.value, page: '1' });
+                      setPage(0); // Reset page on price range change
+                      updateUrlParams({ priceRange: e.target.value, page: 1 });
                     }}
                     className="w-4 h-4"
                   />
@@ -312,7 +301,7 @@ function ProductsPageContent() {
           {/* Sort Bar */}
           <div className="flex items-center justify-between mb-8 p-5 rounded-xl shadow-sm" style={{ backgroundColor: '#F7F1E8', borderColor: '#D96C39', border: '1px solid #D96C39' }}>
             <div className="text-sm font-medium" style={{ color: '#3F2E23' }}>
-              Tìm thấy <span style={{ color: '#D96C39', fontWeight: 'bold' }}>{filteredProducts.length}</span> sản phẩm
+              Tìm thấy <span style={{ color: '#D96C39', fontWeight: 'bold' }}>{currentTotalElements}</span> sản phẩm
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium" style={{ color: '#3F2E23' }}>Sắp xếp:</span>
@@ -320,8 +309,8 @@ function ProductsPageContent() {
                 value={sortBy}
                 onChange={(e) => {
                   setSortBy(e.target.value);
-                  setPage(0);
-                  updateUrlParams({ sort: e.target.value, page: '1' });
+                  setPage(0); // Reset page on sort change
+                  updateUrlParams({ sort: e.target.value, page: 1 });
                 }}
                 className="px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 transition-all duration-300 cursor-pointer"
                 style={{
@@ -341,10 +330,10 @@ function ProductsPageContent() {
           </div>
 
           {/* Products Grid */}
-          {pageItems.length > 0 ? (
+          {products.length > 0 ? (
             <div>
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                {pageItems.map((product, idx) => {
+                {products.map((product, idx) => {
                   const categoryName = categories.find(c => c.id === product.category_id)?.name || 'Chưa phân loại';
                   return (
                     <div
@@ -445,29 +434,29 @@ function ProductsPageContent() {
               <div className="mt-12 flex items-center justify-center gap-2 pb-8 w-full">
                 <button
                   onClick={() => {
-                    const nextPage = Math.max(0, safePage - 1);
-                    setPage(nextPage);
-                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`, { scroll: false });
+                    const newPage = Math.max(0, page - 1);
+                    setPage(newPage);
+                    updateUrlParams({ page: newPage + 1 });
                   }}
-                  disabled={safePage === 0}
+                  disabled={page === 0}
                   className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-sm"
                   style={{
-                    backgroundColor: safePage === 0 ? '#E8D5B5' : '#F7F1E8',
+                    backgroundColor: page === 0 ? '#E8D5B5' : '#F7F1E8',
                     color: '#3F2E23',
                     borderColor: '#D96C39',
                     border: '1px solid #D96C39',
-                    opacity: safePage === 0 ? 0.5 : 1,
-                    cursor: safePage === 0 ? 'not-allowed' : 'pointer'
+                    opacity: page === 0 ? 0.5 : 1,
+                    cursor: page === 0 ? 'not-allowed' : 'pointer'
                   }}
                 >
                   ← Prev
                 </button>
 
-                {Array.from({ length: totalPages }).map((_, i) => {
-                  const show = totalPages <= 7 || Math.abs(i - safePage) <= 2 || i === 0 || i === totalPages - 1;
+                {Array.from({ length: currentTotalPages }).map((_, i) => {
+                  const show = currentTotalPages <= 7 || Math.abs(i - page) <= 2 || i === 0 || i === currentTotalPages - 1;
                   if (!show) {
-                    const leftGap = i === 1 && safePage > 3;
-                    const rightGap = i === totalPages - 2 && safePage < totalPages - 4;
+                    const leftGap = i === 1 && page > 3;
+                    const rightGap = i === currentTotalPages - 2 && page < currentTotalPages - 4;
                     if (leftGap || rightGap) {
                       return <span key={`gap-${i}`} className="px-2 font-medium" style={{ color: '#D96C39' }}>…</span>;
                     }
@@ -478,12 +467,12 @@ function ProductsPageContent() {
                       key={i}
                       onClick={() => {
                         setPage(i);
-                        router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${i + 1}`, { scroll: false });
+                        updateUrlParams({ page: i + 1 });
                       }}
                       className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-110 shadow-sm"
                       style={{
-                        backgroundColor: i === safePage ? '#D96C39' : '#F7F1E8',
-                        color: i === safePage ? 'white' : '#3F2E23',
+                        backgroundColor: i === page ? '#D96C39' : '#F7F1E8',
+                        color: i === page ? 'white' : '#3F2E23',
                         borderColor: '#D96C39',
                         border: '1px solid #D96C39'
                       }}
@@ -495,19 +484,19 @@ function ProductsPageContent() {
 
                 <button
                   onClick={() => {
-                    const nextPage = Math.min(totalPages - 1, safePage + 1);
-                    setPage(nextPage);
-                    router.push(`/shop/products?${selectedCategoryId !== 'all' ? `categoryId=${selectedCategoryId}&` : ''}priceRange=${priceRange}&sort=${sortBy}&page=${nextPage + 1}`, { scroll: false });
+                    const newPage = Math.min(currentTotalPages - 1, page + 1);
+                    setPage(newPage);
+                    updateUrlParams({ page: newPage + 1 });
                   }}
-                  disabled={safePage >= totalPages - 1}
+                  disabled={page >= currentTotalPages - 1}
                   className="px-4 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-sm"
                   style={{
-                    backgroundColor: safePage >= totalPages - 1 ? '#E8D5B5' : '#F7F1E8',
+                    backgroundColor: page >= currentTotalPages - 1 ? '#E8D5B5' : '#F7F1E8',
                     color: '#3F2E23',
                     borderColor: '#D96C39',
                     border: '1px solid #D96C39',
-                    opacity: safePage >= totalPages - 1 ? 0.5 : 1,
-                    cursor: safePage >= totalPages - 1 ? 'not-allowed' : 'pointer'
+                    opacity: page >= currentTotalPages - 1 ? 0.5 : 1,
+                    cursor: page >= currentTotalPages - 1 ? 'not-allowed' : 'pointer'
                   }}
                 >
                   Next →
