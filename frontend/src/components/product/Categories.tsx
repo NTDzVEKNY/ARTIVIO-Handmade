@@ -3,12 +3,8 @@
 import {useState, useEffect} from 'react';
 import Link from "next/link";
 import {axiosClient} from "@/lib/axios";
-import {Category} from "@/types";
-
-
-interface EnrichedCategory extends Category {
-    soldCount?: number;
-}
+import {EnrichedCategory, mapToEnrichedCategory} from "@/utils/CategoryMapper";
+import { RawCategoryResponse } from '@/types/apiTypes';
 
 const categoryIcons: { [key: string]: string } = {
     "Đồng hồ": "🕰️",
@@ -28,10 +24,11 @@ export default function Categories() {
 
         const fetchCategories = async () => {
             try {
-                const response = await axiosClient.get<EnrichedCategory[]>('/category');
-                const categoriesData = response.data.slice(0, 4);
+                const response = await axiosClient.get<RawCategoryResponse[]>('/category');
+                const enrichedData = response.data.map(mapToEnrichedCategory);
+                const categoriesData = enrichedData.slice(0, 4);
 
-                console.log(">>> Categories data:", categoriesData);
+                console.log(">>> Categories data (Enriched):", categoriesData);
                 setCategories(categoriesData);
 
             } catch (error) {

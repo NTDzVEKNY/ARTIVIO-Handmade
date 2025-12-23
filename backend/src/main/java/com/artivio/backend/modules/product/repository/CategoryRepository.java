@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category,Long> {
     @Query("SELECT new com.artivio.backend.modules.product.dto.CategoryDTO(" +
-            "c.categoryId, c.categoryName, COALESCE(SUM(p.quantitySold), 0)) " + // sum trả ra mặc định là Long
+            "c.categoryId, c.categoryName, c.slug, c.parentId, c.createdAt, c.updatedAt, COALESCE(SUM(p.quantitySold), 0)) " + // sum trả ra mặc định là Long
             "FROM Category c " +
             "LEFT JOIN c.products p " +
             "GROUP BY c.categoryId, c.categoryName " +
