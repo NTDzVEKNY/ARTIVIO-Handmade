@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from "next/image";
 import Link from "next/link";
 
-import { Product } from '~/types';
+import { Product } from '@/types';
 
 interface ProductWithCategory extends Product {
   categoryName?: string;
