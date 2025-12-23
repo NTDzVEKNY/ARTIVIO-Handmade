@@ -10,6 +10,7 @@ import com.artivio.backend.modules.product.model.enums.EnumStatus;
 
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "products")
@@ -50,6 +51,12 @@ public class Product {
     
     @Column(name = "description")
     private String description;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     // Quan hệ 1-nhiều với OrderItem
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

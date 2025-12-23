@@ -17,23 +17,70 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import com.artivio.backend.modules.product.model.enums.EnumStatus;
+import com.artivio.backend.modules.product.dto.request.ProductFilterDto;
+import com.artivio.backend.modules.product.dto.response.PagedResponse;
+import com.artivio.backend.modules.product.dto.response.PaginatedResponseDto;
+import com.artivio.backend.modules.product.dto.response.ProductResponseDto;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+import java.util.ArrayList;
+
 @Service
 @RequiredArgsConstructor
 public class HandmadeService {
-    @Autowired
-    private ProductRepository productRepository;
-    @Autowired
-    private CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
 
     // Lấy danh sách danh mục
     public List<CategoryDTO> getAllCategories() {
         return categoryRepository.findAllWithTotalSold();
     }
+
+    // Lấy danh sách sản phẩm
+    public PaginatedResponseDto<ProductResponseDto> getAllProducts(ProductFilterDto filterDto) {
+        // 1. Xử lý Sort
+        Sort sort = buildSort(filterDto.getSort());
+
+        // 2. Tạo Pageable từ page, size và sort
+        Pageable pageable = PageRequest.of(filterDto.getPage(), filterDto.getSize(), sort);
+
+        // 3. Tạo Specification từ điều kiện lọc
+        Specification<Product> spec = buildSpecification(filterDto);
+
+        // 4. Gọi Repository với Spec và Pageable
+        // Lưu ý: Repository phải extend JpaSpecificationExecutor<Product>
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+
+        // 5. Map sang DTO
+        List<ProductResponseDto> content = productPage.getContent().stream()
+                .map(product -> {
+                    ProductResponseDto dto = productMapper.toResponseDto(product);
+                    // QUAN TRỌNG: Lấy tên category.
+                    // Nếu Entity Product đã map @ManyToOne với Category thì:
+                    if (product.getCategory() != null) {
+                        dto.setCategoryName(product.getCategory().getCategoryName());
+                    } else {
+                        dto.setCategoryName("N/A");
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        // 6. Trả về kết quả
+        return new PaginatedResponseDto<>(
+                content,
+                filterDto.getPage(),
+                filterDto.getSize(),
+                productPage.getTotalElements()
+        );
+    }
+
     // Create product
     public ProductDTO create(ProductRequestDTO req) {
         Category category = categoryRepository.findById(req.getCategoryId())
@@ -116,4 +163,38 @@ public class HandmadeService {
         return productRepository.save(product);
     }
 
+    private Specification<Product> buildSpecification(ProductFilterDto filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 1. Lọc theo Category ID (nếu có)
+            if (filter.getCategoryId() != null) {
+                predicates.add(cb.equal(root.get("category").get("id"), filter.getCategoryId()));
+            }
+
+            // 2. Lọc theo từ khóa tìm kiếm (theo tên, không phân biệt hoa thường)
+            if (filter.getKeyword() != null && !filter.getKeyword().isEmpty()) {
+                String likePattern = "%" + filter.getKeyword().toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("name")), likePattern));
+            }
+
+            // 3. Đảm bảo status là ACTIVE (Logic ẩn thường có)
+            // predicates.add(cb.equal(root.get("status"), "ACTIVE"));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private Sort buildSort(String sortParam) {
+        if (sortParam == null) return Sort.by("quantitySold").descending(); // Default: Featured
+
+        return switch (sortParam) {
+            case "price-asc" -> Sort.by("price").ascending();
+            case "price-desc" -> Sort.by("price").descending();
+            case "name-asc" -> Sort.by("name").ascending();
+            case "name-desc" -> Sort.by("name").descending();
+            case "featured" -> Sort.by("quantitySold").descending();
+            default -> Sort.by("quantitySold").descending();
+        };
+    }
 }

@@ -1,6 +1,6 @@
 export type Product = {
 	id: number;
-	artisan_id: number;
+	artisan_id: number | null;
 	category_id: number | null;
 	name: string;
 	description: string | null;
