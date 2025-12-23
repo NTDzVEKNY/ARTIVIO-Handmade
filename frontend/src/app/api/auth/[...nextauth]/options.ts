@@ -4,7 +4,7 @@ import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/app/api/_lib/mockData";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8080/api";
 
 export const authOptions: NextAuthOptions = {
     providers: [
