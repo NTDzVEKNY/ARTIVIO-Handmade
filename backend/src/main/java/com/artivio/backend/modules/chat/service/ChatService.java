@@ -47,7 +47,7 @@ public class ChatService {
                     Chat newChat = Chat.builder()
                             .customer(customer)
                             .artisan(artisan)
-                            .status(Chat.ChatStatus.OPEN)
+                            .status(Chat.ChatStatus.PENDING)
                             .build();
                     return chatRepository.save(newChat);
                 });

@@ -6,5 +6,6 @@ import lombok.Data;
 public class ChatMessageRequest {
     private Long chatId;
     private Long senderId; // Trong thực tế nên lấy từ Token user đang login
+    private boolean isImage;
     private String content;
 }

@@ -47,10 +47,15 @@ CREATE TABLE chats (
                        id INT AUTO_INCREMENT PRIMARY KEY,
                        customer_id INT NOT NULL,
                        artisan_id INT NOT NULL,
-                       status ENUM('open', 'closed') NOT NULL DEFAULT 'open',
+                       product_id INT NULL,
+                       status ENUM('PENDING', 'NEGOTIATING', 'ORDER_CREATED', 'CLOSED') NOT NULL DEFAULT 'PENDING',
+                       description TEXT NULL,
+                       budget DECIMAL(20,2) NULL,
+                       reference_image TEXT NULL,
                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                        FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
-                       FOREIGN KEY (artisan_id) REFERENCES users(id) ON DELETE CASCADE
+                       FOREIGN KEY (artisan_id) REFERENCES users(id) ON DELETE CASCADE,
+                       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
 
 -- 5. Chat Messages
@@ -58,6 +63,7 @@ CREATE TABLE chat_messages (
                                id INT AUTO_INCREMENT PRIMARY KEY,
                                chat_id INT NOT NULL,
                                sender_id INT NOT NULL,
+                               is_image TINYINT(1) NOT NULL DEFAULT 0, -- 0: text, 1: image
                                message TEXT NOT NULL,
                                sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                                FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE,

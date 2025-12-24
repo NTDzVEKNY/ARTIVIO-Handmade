@@ -26,8 +26,17 @@ public class Chat {
     private User artisan;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "enum('OPEN','CLOSED')")
+    @Column(columnDefinition = "enum('PENDING', 'NEGOTIATING', 'ORDER_CREATED','CLOSED')")
     private ChatStatus status;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "budget")
+    private Double budget;
+
+    @Column(name = "reference_image")
+    private String referenceImage;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

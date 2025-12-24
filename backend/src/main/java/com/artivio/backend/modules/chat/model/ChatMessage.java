@@ -28,6 +28,9 @@ public class ChatMessage {
     @Column(columnDefinition = "TEXT")
     private String message;
 
+    @Column(name = "is_image")
+    private boolean isImage;
+
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
 
