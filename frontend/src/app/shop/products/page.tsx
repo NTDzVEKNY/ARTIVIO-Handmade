@@ -10,11 +10,11 @@ import toast, {Toaster} from 'react-hot-toast';
 import {useCart} from '@/contexts/CartContext';
 
 const PRICE_RANGES = [
-    {id: 'all', label: 'Tất cả', min: 0, max: Infinity},
+    {id: 'all', label: 'Tất cả', min: 0},
     {id: 'under-100k', label: 'Dưới 100.000đ', min: 0, max: 100000},
     {id: '100k-200k', label: '100.000 - 200.000đ', min: 100000, max: 200000},
     {id: '200k-500k', label: '200.000 - 500.000đ', min: 200000, max: 500000},
-    {id: 'over-500k', label: 'Trên 500.000đ', min: 500000, max: Infinity},
+    {id: 'over-500k', label: 'Trên 500.000đ', min: 500000},
 ];
 
 const categoryIcons: Record<string, string> = {
@@ -35,26 +35,26 @@ const SORT_OPTIONS = [
     {id: 'price-desc', label: 'Giá giảm dần'},
 ];
 
-import {Product, Category} from '@/types';
 import {EnrichedCategory, mapToEnrichedCategory} from '@/utils/CategoryMapper';
-import {RawCategoryResponse} from '@/types/apiTypes';
+import {RawCategoryResponse, PaginatedProductResponse} from '@/types/apiTypes';
 import {initializeProductsStorage, isProductOutOfStock, getStockStatusText} from '@/lib/inventory';
 import {axiosClient} from "@/lib/axios";
 import {mapToProductWithCategory, ProductWithCategory} from '@/utils/ProductMapper';
-import {PaginatedProductResponse} from '@/types/apiTypes';
 
 function ProductsPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const categoryIdParam = searchParams.get('categoryId');
-    const pageParam = searchParams.get('page');
+    const pageParam = searchParams.get('page') || '1';
     const priceRangeParam = searchParams.get('priceRange') || 'all';
     const sortParam = searchParams.get('sort') || 'featured';
 
-    const [products, setProducts] = useState<Product[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
+    const [products, setProducts] = useState<ProductWithCategory[]>([]);
+    const [categories, setCategories] = useState<EnrichedCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
+
+
     const [searchQuery, setSearchQuery] = useState('');
     const [priceRange, setPriceRange] = useState<string>(priceRangeParam);
     const [sortBy, setSortBy] = useState<string>(sortParam);
@@ -62,12 +62,12 @@ function ProductsPageContent() {
     const pageSize = 24;
     const {addItem} = useCart();
 
-    const totalItems = 100;
-    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
     const safePage = Math.max(0, Math.min(page, totalPages - 1));
     const start = safePage * pageSize;
     const end = start + pageSize;
-    const pageItems = [];
 
     useEffect(() => {
         const p = Number(pageParam ?? 1);
@@ -75,57 +75,53 @@ function ProductsPageContent() {
     }, [pageParam]);
 
     useEffect(() => {
-        // const fetchData = async () => {
-        //     try {
-        //         setLoading(true);
-        //         const [productsRes, categoriesRes] = await Promise.all([
-        //             fetch('/api/products?size=0'),
-        //             fetch('/api/categories')
-        //         ]);
-        //         const productsData: Product[] | { content: Product[] } = await productsRes.json();
-        //         const categoriesData: Category[] = await categoriesRes.json();
-        //
-        //         const productList = 'content' in productsData && Array.isArray(productsData.content) ? productsData.content : productsData;
-        //         const validProducts = Array.isArray(productList) ? productList : [];
-        //         setProducts(validProducts);
-        //         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-        //
-        //         // Initialize localStorage with products from server
-        //         if (validProducts.length > 0) {
-        //             initializeProductsStorage(validProducts);
-        //         }
-        //     } catch (error) {
-        //         console.error("Failed to fetch data:", error);
-        //         setProducts([]);
-        //         setCategories([]);
-        //     } finally {
-        //         setLoading(false);
-        //     }
-        // };
-
         const fetchData = async () => {
             try {
-                const pagedResponse = await axiosClient.get<PaginatedProductResponse>('/products');
+                const params = new URLSearchParams();
+                params.set('size', String(pageSize));
+                params.set('page', String( Number(pageParam) - 1));
+                if (categoryIdParam) params.set('categoryId', categoryIdParam);
+                if (searchQuery) params.set('keyword', searchQuery);
+                if (priceRange !== 'all') {
+                    const range = PRICE_RANGES.find(r => r.id === priceRange);
+                    if (range) {
+                        if (range.min) params.set('minPrice', String(range.min));
+                        if (range.max) params.set('maxPrice', String(range.max));
+                    }
+                }
+                if (sortBy !== 'featured') params.set('sort', sortBy);
+
+                console.log(">>> Params:", params.toString());
+
+
+                const pagedResponse = await axiosClient.get<PaginatedProductResponse>('/products', {params});
+                const productData = pagedResponse.data;
+                setTotalItems(productData.totalElements);
+                setTotalPages(productData.totalPages);
+                const productsWithCategory = productData.content.map(mapToProductWithCategory);
                 const categoriesRes = await axiosClient.get<RawCategoryResponse[]>('/category');
                 const enrichedCategories = categoriesRes.data.map(mapToEnrichedCategory);
 
                 console.log(">>> Paged response:", pagedResponse);
                 console.log(">>> Categories response:", enrichedCategories);
+                console.log(">>> Products with category:", productsWithCategory);
 
+                setProducts(productsWithCategory);
                 setCategories(enrichedCategories);
+                setLoading(false);
 
             } catch (error) {
                 console.error("Failed to fetch data:", error);
                 setProducts([]);
                 setCategories([]);
+                setTotalItems(0);
             } finally {
                 setLoading(false);
             }
         }
 
-
-        fetchData();
-    }, []);
+        fetchData().catch(console.error);
+    }, [ categoryIdParam, pageParam, priceRange, sortParam, searchQuery ]);
 
     useEffect(() => {
         if (categories.length === 0) return;
@@ -349,10 +345,10 @@ function ProductsPageContent() {
                     </div>
 
                     {/* Products Grid */}
-                    {pageItems.length > 0 ? (
+                    {products.length > 0 ? (
                         <div>
                             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                                {pageItems.map((product, idx) => {
+                                {products.map((product, idx) => {
                                     const categoryName = categories.find(c => c.id === product.category_id)?.name || 'Chưa phân loại';
                                     return (
                                         <div
@@ -375,7 +371,7 @@ function ProductsPageContent() {
                                                     className="relative w-full h-48 overflow-hidden pointer-events-none"
                                                     style={{backgroundColor: '#E8D5B5'}}>
                                                     <Image
-                                                        src={product.image || '/artivio-logo.png'}
+                                                        src={product.image ? (product.image.startsWith('//') ? `https:${product.image}` : product.image) : product.image || '/artivio-logo.png'}
                                                         alt={product.name}
                                                         fill
                                                         className="object-cover group-hover:scale-110 transition-transform duration-500"
