@@ -31,7 +31,7 @@ const categoryIcons: Record<string, string> = {
     "Quà tặng": "🎁",
     "Thiệp handmade": "💌",
     "Phụ kiện & nguyên liệu": "🧵",
-    "Vải decor": "🎨",
+    "Vải decor": "🧣",
     "Ví & passport": "💼",
     "Limited": "🌟",
 };
@@ -411,7 +411,7 @@ function ProductsPageContent() {
                                                                         style={{ backgroundColor: '#D96C39' }}
                                                                     >
                                                                         <ShoppingCart size={12} />
-                                                                        <span className="whitespace-nowrap">Thêm</span>
+                                                                        <span className="whitespace-nowrap">Thêm vào giỏ hàng</span>
                                                                     </button>
                                                                     <button
                                                                         type="button"
@@ -420,7 +420,7 @@ function ProductsPageContent() {
                                                                         style={{ backgroundColor: '#3F2E23' }}
                                                                     >
                                                                         <CreditCard size={12} />
-                                                                        <span className="whitespace-nowrap">Mua</span>
+                                                                        <span className="whitespace-nowrap">Mua ngay</span>
                                                                     </button>
                                                                 </>
                                                             )}
