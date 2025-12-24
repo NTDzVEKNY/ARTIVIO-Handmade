@@ -34,32 +34,6 @@ export default function ProductDetailPage() {
         setLoading(true);
         setError(null);
 
-        // fetch(`/api/products/${productId}`)
-        //     .then((res) => {
-        //         if (!res.ok) {
-        //             throw new Error(`Không tìm thấy sản phẩm (mã lỗi: ${res.status})`);
-        //         }
-        //         return res.json() as Promise<Product>;
-        //     })
-        //     .then((data) => {
-        //         setProduct(data);
-        //         setQuantity(1);
-        //         if (data.category_id) {
-        //             fetch('/api/categories')
-        //                 .then((res) => res.json())
-        //                 .then((cats: Category[]) => {
-        //                     const cat = cats.find((c) => c.id === data.category_id);
-        //                     if (cat) setCategoryName(cat.name);
-        //                 })
-        //                 .catch((err) => console.error('Failed to fetch categories', err));
-        //         }
-        //     })
-        //     .catch((err: unknown) => {
-        //         setError(err instanceof Error ? err.message : 'Không tải được sản phẩm');
-        //         console.error(err);
-        //     })
-        //     .finally(() => setLoading(false));
-
         const fetchProduct = async () => {
             try {
                 const productData = await axiosClient.get<RawProductResponse>(`/products/${productId}`);

@@ -1,3 +1,6 @@
+import useAxiosAuth from "@/hooks/useAxiosAuth";
+import {useCallback, useState} from "react";
+
 export type RawCategoryResponse = {
     categoryId: number;
     categoryName: string;
@@ -45,4 +48,30 @@ export interface RawOrderResponse {
     isCustomOrder: boolean;
     note: string | null ;
     items: RawOrderItem[];
+}
+
+export interface RawOrderDetailItem {
+    id: number;
+    productId: number;
+    productName: string;
+    productImage: string;
+    quantity: number;
+    price: number;
+    subtotal: number;
+}
+
+export interface RawOrderDetail {
+    id: number;
+    chatId: number | null;
+    orderDate: string; // ISO String
+    status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+    totalPrice: number;
+    shippingFee: number;
+    finalTotal: number;
+    paymentMethod: string;
+    shippingAddress: string;
+    customerName: string;
+    customerPhone: string;
+    note: string | null;
+    items: RawOrderDetailItem[];
 }
