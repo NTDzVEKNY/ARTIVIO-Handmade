@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
+import com.artivio.backend.modules.order.dto.OrderDetailDTO;
 
 
 import java.math.BigDecimal;
@@ -106,9 +107,12 @@ public class OrderService {
         // 4. Lưu xuống DB (Cascade sẽ tự lưu OrderItems)
         return orderRepository.save(order);
     }
-    public Order getOrderById(Long id) {
-        return orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng có ID: " + id));
+
+    // Lấy chi tiết đơn hàng
+    public OrderDetailDTO getOrderById(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+        return orderMapper.mapToDetailDTO(order);
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
+import com.artivio.backend.modules.order.dto.OrderDetailDTO;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,7 +54,7 @@ public class OrderController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getOrder(@PathVariable Long id) {
         try {
-            Order order = orderService.getOrderById(id);
+            OrderDetailDTO order = orderService.getOrderById(id);
             return ResponseEntity.ok(order);
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(e.getMessage());

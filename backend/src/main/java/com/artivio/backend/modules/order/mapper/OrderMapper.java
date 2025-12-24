@@ -8,10 +8,12 @@ import com.artivio.backend.modules.order.model.User;
 import com.artivio.backend.modules.order.repository.UserRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.artivio.backend.modules.order.dto.OrderDetailDTO;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @Component
 public class OrderMapper {
@@ -71,4 +73,42 @@ public class OrderMapper {
                 .items(items)
                 .build();
     }
+
+    public OrderDetailDTO mapToDetailDTO(Order order) {
+        if (order == null) {
+            return null;
+        }
+
+        // Map danh sách items
+        // Lưu ý: item là Entity, OrderDetail.OrderItem là DTO
+        List<OrderDetailDTO.OrderItem> items = order.getOrderItems().stream()
+                .map(item -> OrderDetailDTO.OrderItem.builder()
+                        .id(item.getId())
+                        .productId(item.getProduct().getId())
+                        .productName(item.getProduct().getProductName())
+                        .quantity(item.getQuantity())
+                        .price(item.getPriceOrder())
+                        // Tính subtotal: giá * số lượng
+                        .subtotal(item.getPriceOrder().multiply(BigDecimal.valueOf(item.getQuantity())))
+                        .productImage(item.getProduct().getImage())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Map Order chính
+        return OrderDetailDTO.builder()
+                .id(order.getId())
+                .chatId(order.getChat() != null ? order.getChat().getId() : null)
+                .status(order.getStatus())
+                .totalPrice(order.getTotalPrice())
+                .paymentMethod(order.getPaymentMethod())
+                .shippingAddress(order.getAddress())
+                .customerName(order.getCustomer() != null ? order.getCustomer().getUsername() : "N/A")
+                .customerPhone(order.getPhoneNumber())
+                .note(order.getNote())
+                .orderDate(order.getCreatedAt()) // Thường Entity sẽ có field createdAt
+                .items(items)
+                .build();
+    }
+
+
 }
