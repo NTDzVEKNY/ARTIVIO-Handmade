@@ -175,7 +175,7 @@ public class HandmadeService {
             // 2. Lọc theo từ khóa tìm kiếm (theo tên, không phân biệt hoa thường)
             if (filter.getKeyword() != null && !filter.getKeyword().isEmpty()) {
                 String likePattern = "%" + filter.getKeyword().toLowerCase() + "%";
-                predicates.add(cb.like(cb.lower(root.get("name")), likePattern));
+                predicates.add(cb.like(cb.lower(root.get("productName")), likePattern));
             }
 
             // 3. Lọc theo khoảng giá min price và max price(nếu có)
@@ -190,7 +190,7 @@ public class HandmadeService {
             }
 
             // 3. Đảm bảo status là ACTIVE (Logic ẩn thường có)
-            // predicates.add(cb.equal(root.get("status"), "ACTIVE"));
+            predicates.add(cb.equal(root.get("status"), "ACTIVE"));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };

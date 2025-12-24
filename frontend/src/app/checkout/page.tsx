@@ -341,7 +341,7 @@ export default function CheckoutPage() {
                       <div key={item.id} className="flex gap-4">
                         <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           <Image
-                            src={item.image || '/hero-handmade.jpg'}
+                            src={item.image ? (item.image.startsWith('//') ? `https:${item.image}` : item.image) : item.image || '/hero-handmade.jpg'}
                             alt={item.productName}
                             fill
                             className="object-cover"
