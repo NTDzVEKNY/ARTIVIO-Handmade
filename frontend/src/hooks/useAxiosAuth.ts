@@ -1,43 +1,78 @@
 "use client";
 
 import { axiosAuth } from "@/lib/axios";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, getSession } from "next-auth/react";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 const useAxiosAuth = () => {
     const { data: session } = useSession();
+    const router = useRouter();
 
     useEffect(() => {
         const requestIntercept = axiosAuth.interceptors.request.use(
-            (config) => {
-                // Nếu session tồn tại và chưa có header Authorization
-                if (!config.headers["Authorization"] && session?.user?.apiAccessToken) {
-                    config.headers["Authorization"] = `Bearer ${session.user.apiAccessToken}`;
+            async (config) => {
+                if (!config.headers["Authorization"]) {
+
+                    // Ưu tiên 1: Lấy từ session hook (nhanh nhất nếu đã có)
+                    if (session?.user?.apiAccessToken) {
+                        config.headers["Authorization"] = `Bearer ${session.user.apiAccessToken}`;
+                    }
+                    // Ưu tiên 2: Xử lý F5 Refresh - Nếu hook chưa load kịp, gọi getSession()
+                    else {
+                        const newSession = await getSession();
+                        if (newSession?.user?.apiAccessToken) {
+                            config.headers["Authorization"] = `Bearer ${newSession.user.apiAccessToken}`;
+                        }
+                    }
                 }
                 return config;
             },
             (error) => Promise.reject(error)
         );
 
-        // Response Interceptor: Xử lý lỗi 401
         const responseIntercept = axiosAuth.interceptors.response.use(
             (response) => response,
             async (error) => {
-                // Kiểm tra nếu lỗi là 401 (Unauthorized)
-                if (error.response?.status === 401) {
+                const status = error.response?.status;
+                const isLoginPage = window.location.pathname === "/login";
+
+                // Xử lý lỗi 401: Hết hạn phiên đăng nhập -> Logout
+                if (status === 401 && !isLoginPage) {
                     console.log("Phiên đăng nhập hết hạn. Đang đăng xuất...");
-
-                    // 2. Thực hiện Logout
                     await signOut({
-                        callbackUrl: "/login", // Sau khi logout thì chuyển hướng về trang login
-                        redirect: true,        // Bắt buộc chuyển hướng
+                        callbackUrl: "/login",
+                        redirect: true,
                     });
-
-                    // Có thể trả về Promise.reject để component biết là request đã fail
-                    throw error;
+                    return Promise.reject(error);
                 }
 
-                throw error;
+                // 3. Xử lý lỗi 403: Không có quyền truy cập
+                if (status === 403) {
+                    toast.error("Bạn không có quyền truy cập! Đang chuyển hướng...", {
+                        duration: 2000, // Toast hiển thị trong 2 giây
+                    });
+
+                    // Đợi 1.5 giây (1500ms) để người dùng kịp đọc rồi mới chuyển trang
+
+
+                    // Cách 1: Chuyển hướng đến trang thông báo lỗi riêng (Tạo file app/403/page.tsx)
+                    // router.push("/403");
+
+                    // Cách 2: Chuyển hướng về trang chủ
+                    // router.push("/");
+
+                    // Cách 3 (Phổ biến nhất): Không chuyển trang, chỉ trả về lỗi để Component hiển thị Toast/Notification
+                    // Bạn có thể giữ nguyên Promise.reject để UI tự xử lý hiển thị thông báo.
+
+                    // Nếu bạn muốn bắt buộc chuyển trang khi gặp 403, bỏ comment dòng dưới:
+                    setTimeout(() => {
+                        router.push("/login");
+                    }, 1500);
+                }
+
+                return Promise.reject(error);
             }
         );
 
@@ -45,7 +80,7 @@ const useAxiosAuth = () => {
             axiosAuth.interceptors.request.eject(requestIntercept);
             axiosAuth.interceptors.response.eject(responseIntercept);
         };
-    }, [session]);
+    }, [session, router]);
 
     return axiosAuth;
 };

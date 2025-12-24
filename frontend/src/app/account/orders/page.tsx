@@ -1,0 +1,225 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import Image from "next/image";
+import useMyOrders from "@/hooks/useMyOrders";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Loader2, Package, Calendar, DollarSign, ChevronRight, XCircle } from "lucide-react";
+import { Header, Footer } from "@/components/common"; // Đảm bảo đường dẫn đúng
+import { Toaster } from "react-hot-toast";
+
+export default function MyOrdersPage() {
+    const { orders, isLoading, error, cancelOrder } = useMyOrders();
+
+    // Hàm helper để render badge trạng thái với style mới
+    const renderStatusBadge = (status: string) => {
+        const statusMap: Record<string, { label: string; className: string; icon: string }> = {
+            PENDING: {
+                label: "Đang chờ xử lý",
+                className: "bg-yellow-100 text-yellow-800 border-yellow-200",
+                icon: "⏳"
+            },
+            IN_PROGRESS: {
+                label: "Đang giao hàng",
+                className: "bg-blue-100 text-blue-800 border-blue-200",
+                icon: "🚚"
+            },
+            COMPLETED: {
+                label: "Hoàn thành",
+                className: "bg-green-100 text-green-800 border-green-200",
+                icon: "✅"
+            },
+            CANCELLED: {
+                label: "Đã hủy",
+                className: "bg-red-100 text-red-800 border-red-200",
+                icon: "❌"
+            },
+        };
+
+        const config = statusMap[status] || { label: status, className: "bg-gray-100 text-gray-800", icon: "📦" };
+
+        return (
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 shadow-sm ${config.className}`}>
+                <span>{config.icon}</span>
+                {config.label}
+            </span>
+        );
+    };
+
+    return (
+        <div className="min-h-screen font-sans flex flex-col" style={{ backgroundColor: '#F7F1E8', color: '#3F2E23' }}>
+            <Toaster position="top-center" />
+            <Header />
+
+            <main className="flex-grow container mx-auto px-4 py-12">
+                {/* Page Header */}
+                <div className="mb-12 text-center">
+                    <h1 className="text-4xl font-bold mb-3" style={{ color: '#3F2E23' }}>
+                        📦 Lịch sử đơn hàng
+                    </h1>
+                    <div className="h-1 w-24 mx-auto rounded-full mb-4" style={{ backgroundColor: '#D96C39' }}></div>
+                    <p className="text-lg" style={{ color: '#6B4F3E' }}>
+                        Theo dõi và quản lý các đơn hàng của bạn
+                    </p>
+                </div>
+
+                {/* Content Area */}
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <Loader2 className="h-10 w-10 animate-spin mb-4" style={{ color: '#D96C39' }} />
+                        <p className="text-lg font-medium animate-pulse" style={{ color: '#6B4F3E' }}>Đang tải dữ liệu...</p>
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-16 rounded-xl border border-dashed border-red-200 bg-red-50 mx-auto max-w-2xl">
+                        <div className="text-red-500 mb-4 text-5xl">⚠️</div>
+                        <h3 className="text-xl font-bold text-red-700 mb-2">Có lỗi xảy ra</h3>
+                        <p className="text-red-600 mb-6">{error}</p>
+                        <Button
+                            onClick={() => window.location.reload()}
+                            className="bg-white text-red-600 border border-red-200 hover:bg-red-50"
+                        >
+                            Thử lại
+                        </Button>
+                    </div>
+                ) : orders.length === 0 ? (
+                    <div className="text-center py-20 rounded-xl border-2 border-dashed" style={{ borderColor: '#E8D5B5', backgroundColor: '#FFF8F0' }}>
+                        <div className="text-8xl mb-6 animate-bounce">🛍️</div>
+                        <h3 className="text-2xl font-semibold mb-3" style={{ color: '#3F2E23' }}>
+                            Bạn chưa có đơn hàng nào
+                        </h3>
+                        <p className="text-base mb-8" style={{ color: '#6B4F3E' }}>
+                            Hãy khám phá các sản phẩm thủ công độc đáo của Artivio ngay hôm nay.
+                        </p>
+                        <Link href="/shop/products">
+                            <Button
+                                className="px-8 py-6 rounded-full text-white text-base font-medium shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
+                                style={{ backgroundColor: '#D96C39' }}
+                            >
+                                Bắt đầu mua sắm
+                            </Button>
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="space-y-6 max-w-5xl mx-auto">
+                        {orders.map((order, idx) => (
+                            <div
+                                key={order.id}
+                                className="group overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-md bg-white"
+                                style={{
+                                    borderColor: '#E8D5B5',
+                                    animation: `fadeInUp 0.5s ease-out ${idx * 0.1}s backwards`
+                                }}
+                            >
+                                {/* Header đơn hàng */}
+                                <div className="flex flex-wrap items-center justify-between gap-4 border-b px-6 py-4"
+                                     style={{ backgroundColor: '#FFF8F0', borderColor: '#E8D5B5' }}>
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+                                        <div className="flex items-center gap-2">
+                                            <Package size={18} style={{ color: '#D96C39' }} />
+                                            <span className="font-bold text-lg" style={{ color: '#3F2E23' }}>
+                                                #{order.id}
+                                            </span>
+                                        </div>
+                                        <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
+                                        <div className="flex items-center gap-2 text-sm" style={{ color: '#6B4F3E' }}>
+                                            <Calendar size={16} />
+                                            {formatDate(order.orderDate)}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {renderStatusBadge(order.status)}
+                                    </div>
+                                </div>
+
+                                {/* Danh sách sản phẩm */}
+                                <div className="p-6">
+                                    <div className="space-y-4">
+                                        {order.items.map((item, index) => {
+                                            // Xử lý ảnh an toàn
+                                            let imageUrl = item.imageUrl || '/artivio-logo.png';
+                                            if (imageUrl.startsWith('//')) imageUrl = `https:${imageUrl}`;
+
+                                            return (
+                                                <div key={index} className="flex gap-4 items-center">
+                                                    <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border bg-gray-50" style={{ borderColor: '#E8D5B5' }}>
+                                                        <Image
+                                                            src={imageUrl}
+                                                            alt={item.productName}
+                                                            fill
+                                                            className="object-cover"
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-1 flex-col justify-center">
+                                                        <h4 className="font-semibold text-base line-clamp-2" style={{ color: '#3F2E23' }}>
+                                                            {item.productName}
+                                                        </h4>
+                                                        <p className="text-sm mt-1" style={{ color: '#6B4F3E' }}>
+                                                            Số lượng: <span className="font-medium">x{item.quantity}</span>
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-bold text-base" style={{ color: '#D96C39' }}>
+                                                            {formatCurrency(item.price)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Footer đơn hàng (Tổng tiền & Hành động) */}
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t px-6 py-4 bg-gray-50/50" style={{ borderColor: '#E8D5B5' }}>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium" style={{ color: '#6B4F3E' }}>Tổng giá trị:</span>
+                                        <span className="text-xl font-bold" style={{ color: '#D96C39' }}>
+                                            {formatCurrency(order.totalPrice)}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                                        {/* Chỉ hiển thị nút hủy khi đơn hàng ở trạng thái PENDING */}
+                                        {order.status === "PENDING" && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => cancelOrder(order.id)}
+                                                className="flex-1 sm:flex-none border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                            >
+                                                <XCircle size={16} className="mr-2" />
+                                                Hủy đơn
+                                            </Button>
+                                        )}
+
+                                        <Link href={`/orders/${order.id}`} className="flex-1 sm:flex-none">
+                                            <Button
+                                                size="sm"
+                                                className="w-full sm:w-auto text-white shadow-sm hover:shadow transition-all"
+                                                style={{ backgroundColor: '#3F2E23' }}
+                                            >
+                                                Xem chi tiết
+                                                <ChevronRight size={16} className="ml-1" />
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </main>
+
+            <Footer />
+
+            <style jsx global>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
+        </div>
+    );
+}
