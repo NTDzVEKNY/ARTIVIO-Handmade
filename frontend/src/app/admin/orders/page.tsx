@@ -66,7 +66,7 @@ const paymentLabels: Record<PaymentMethod, string> = {
 
 const formatCurrency = (value: number) => `₫${value.toLocaleString('vi-VN')}`;
 
-const AdminOrdersPage = () => {
+const AdminOrde rsPage = () => {
   const [orders, setOrders] = useState<StoredOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<StoredOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);

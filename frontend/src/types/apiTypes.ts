@@ -29,3 +29,20 @@ export type RawProductResponse = {
     createdAt: string;
     updatedAt: string;
 };
+
+export interface RawOrderItem {
+    productName: string;
+    quantity: number;
+    price: number;
+    imageUrl: string | null;
+}
+
+export interface RawOrderResponse {
+    id: number;
+    status: string; // 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+    orderDate: string; // Backend trả về LocalDateTime, JSON sẽ là chuỗi ISO
+    totalPrice: number;
+    isCustomOrder: boolean;
+    note: string | null ;
+    items: RawOrderItem[];
+}
