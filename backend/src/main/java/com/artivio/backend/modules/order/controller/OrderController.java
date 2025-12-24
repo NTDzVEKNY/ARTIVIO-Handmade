@@ -14,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
 import com.artivio.backend.modules.order.dto.OrderDetailDTO;
+import com.artivio.backend.modules.order.dto.OrderStatusUpdateResponseDTO;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -79,9 +80,27 @@ public class OrderController {
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
         try {
             Order order = orderService.updateOrderStatus(id, status);
-            return ResponseEntity.ok(order);
+            // Extract values immediately to avoid any lazy loading issues
+            Long orderId = order.getId();
+            String orderStatus = order.getStatus();
+            
+            // Return a simple DTO instead of the entity to avoid Hibernate proxy serialization issues
+            OrderStatusUpdateResponseDTO response = new OrderStatusUpdateResponseDTO(
+                orderId,
+                orderStatus,
+                "Cập nhật trạng thái đơn hàng thành công"
+            );
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            // Return a simple error message map to avoid serialization issues
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            // Return a simple error message map to avoid serialization issues
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Lỗi khi cập nhật trạng thái đơn hàng: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 

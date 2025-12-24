@@ -20,6 +20,9 @@ import {
 } from '@/lib/ordersStorage';
 import type { PaymentMethod } from '@/types';
 import Image from 'next/image';
+import { fetchApi } from '@/services/api';
+import { mapFrontendToBackendStatus } from '@/utils/orderStatusMapper';
+import toast, { Toaster } from 'react-hot-toast';
 
 
 const statusConfig: Record<
@@ -66,7 +69,7 @@ const paymentLabels: Record<PaymentMethod, string> = {
 
 const formatCurrency = (value: number) => `₫${value.toLocaleString('vi-VN')}`;
 
-const AdminOrde rsPage = () => {
+const AdminOrdersPage = () => {
   const [orders, setOrders] = useState<StoredOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<StoredOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,9 +85,25 @@ const AdminOrde rsPage = () => {
     [orders]
   );
 
-  const handleStatusChange = (orderId: number, status: StoredOrderStatus) => {
-    const updatedOrders = updateOrderStatus(orderId, status);
-    setOrders(updatedOrders);
+  const handleStatusChange = async (orderId: number, status: StoredOrderStatus) => {
+    try {
+      // Map frontend status to backend status
+      const backendStatus = mapFrontendToBackendStatus(status);
+      
+      // Update status in backend
+      await fetchApi(`/orders/${orderId}/status?status=${backendStatus}`, {
+        method: 'PUT',
+      });
+      
+      // Update localStorage for local state
+      const updatedOrders = updateOrderStatus(orderId, status);
+      setOrders(updatedOrders);
+      
+      toast.success('Cập nhật trạng thái đơn hàng thành công');
+    } catch (error: any) {
+      console.error('Error updating order status:', error);
+      toast.error(error.message || 'Không thể cập nhật trạng thái đơn hàng');
+    }
   };
 
   const handleQuickAction = (order: StoredOrder, status: StoredOrderStatus) => {
@@ -113,7 +132,9 @@ const AdminOrde rsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <Toaster position="top-right" />
+      <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold" style={{ color: '#3F2E23' }}>
           Quản lý đơn hàng
@@ -347,6 +368,7 @@ const AdminOrde rsPage = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

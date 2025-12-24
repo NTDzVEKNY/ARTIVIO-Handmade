@@ -154,6 +154,20 @@ public class OrderService {
             throw new RuntimeException("Đơn đã hủy không thể cập nhật trạng thái khác!");
         }
 
+        // Validate status value against allowed ENUM values
+        String[] allowedStatuses = {"PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"};
+        boolean isValidStatus = false;
+        for (String allowed : allowedStatuses) {
+            if (allowed.equals(newStatus)) {
+                isValidStatus = true;
+                break;
+            }
+        }
+        
+        if (!isValidStatus) {
+            throw new RuntimeException("Trạng thái không hợp lệ: " + newStatus + ". Các trạng thái hợp lệ: PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED");
+        }
+
         order.setStatus(newStatus);
         return orderRepository.save(order);
     }

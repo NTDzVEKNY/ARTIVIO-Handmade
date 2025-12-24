@@ -8,6 +8,8 @@ import { fetchApi } from '@/services/api';
 import Image from 'next/image';
 import toast, { Toast } from 'react-hot-toast';
 import { ArrowLeft, Trash, Save, XCircle, AlertTriangle, Image as ImageIcon } from 'lucide-react';
+import { RawProductResponse } from '@/types/apiTypes';
+import { mapToProduct } from '@/utils/ProductMapper';
 
 const ProductDetailPage = () => {
   const router = useRouter();
@@ -30,11 +32,13 @@ const ProductDetailPage = () => {
           setLoading(true);
           // Lấy dữ liệu sản phẩm và danh mục song song để tối ưu
           const [productData, categoriesData] = await Promise.all([
-            fetchApi<Product>(`/products/${id}`),
-            fetchApi<Category[]>(`/categories`)
+            fetchApi<RawProductResponse>(`/products/${id}?admin=true`),
+            fetchApi<Category[]>(`/category`)
           ]);
-          setProduct(productData || null);
-          setFormData(productData || null);
+          // Map RawProductResponse to Product type
+          const mappedProduct = productData ? mapToProduct(productData) : null;
+          setProduct(mappedProduct);
+          setFormData(mappedProduct);
           setCategories(categoriesData || []);
         } catch (error) {
           console.error("Failed to fetch product and categories", error);
@@ -261,7 +265,7 @@ const ProductDetailPage = () => {
             <div className="relative w-full h-80 rounded-lg overflow-hidden shadow-inner bg-[#F7F1E8] flex items-center justify-center border border-[#E8D5B5]">
               {formData.image ? (
                 <Image
-                  src={formData.image}
+                  src={formData.image.startsWith('//') ? `https:${formData.image}` : formData.image}
                   alt={formData.name}
                   fill
                   className="object-cover"

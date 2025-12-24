@@ -51,7 +51,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData }) => {
   useEffect(() => {
     const getCategories = async () => {
       try {
-        const cats = await fetchApi<Category[]>('/categories');
+        const cats = await fetchApi<Category[]>('/category');
         setCategories(cats);
         if (initialData === null && cats.length > 0) {
             setCategoryId(cats[0].id);
@@ -84,6 +84,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData }) => {
         } else {
             await fetchApi('/products', { method: 'POST', body: JSON.stringify(productData) });
         }
+        // Trigger refresh event for products list
+        window.dispatchEvent(new Event('products-refresh'));
         router.push('/admin/products');
         router.refresh();
     } catch (error) {

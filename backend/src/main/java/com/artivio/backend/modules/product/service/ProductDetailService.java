@@ -26,6 +26,14 @@ public class ProductDetailService {
         return productMapper.toDetailResponse(product);
     }
 
+    // Method for admin to get product regardless of status
+    public ProductDetailResponse getProductDetailForAdmin(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Sản phẩm không tồn tại"));
+
+        return productMapper.toDetailResponse(product);
+    }
+
     //Comming Soon
     public void subscribeProduct(Long productId, SubscribeRequest request) {
         Product product = productRepository.findById(productId)

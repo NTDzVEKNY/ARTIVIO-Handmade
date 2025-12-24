@@ -30,11 +30,11 @@ public class OrderMapper {
         }
         Order order = new Order();
 
-        if (dto.getCustomerId() != null) {
-            User customer = userRepository.findById(dto.getCustomerId())
-                    .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getCustomerId()));
-            order.setCustomer(customer);
-        }
+        // Handle customer: use provided customerId or default to guest customer (ID 2)
+        Long customerIdToUse = dto.getCustomerId() != null ? dto.getCustomerId() : 2L; // Default to user ID 2 for guest checkout
+        User customer = userRepository.findById(customerIdToUse)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + customerIdToUse));
+        order.setCustomer(customer);
 
         order.setArtisanId(dto.getArtisanId());
 
