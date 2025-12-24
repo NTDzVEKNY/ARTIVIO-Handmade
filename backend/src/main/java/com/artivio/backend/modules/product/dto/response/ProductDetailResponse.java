@@ -16,6 +16,7 @@ public class ProductDetailResponse {
     private Double price;
     private String image;
     private Integer stockQuantity;
+    private Integer quantitySold;
     private String categoryName;
     private String material; // Field này FE yêu cầu (dù DB chưa có)
     private boolean isOutOfStock; // Cờ để FE hiển thị giao diện Hết hàng
