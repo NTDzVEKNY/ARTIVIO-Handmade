@@ -14,6 +14,8 @@ import com.artivio.backend.modules.chat.dto.ChatMessageRequest;
 import com.artivio.backend.modules.chat.model.ChatMessage;
 import com.artivio.backend.modules.chat.repository.ChatMessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.artivio.backend.modules.chat.dto.ChatRequest;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -26,39 +28,42 @@ public class ChatService {
     private final UserRepository userRepository;
 
     @Transactional
-    public ChatInitiateResponse initiateChat(Long customerId, Long productId) {
-        // 1. Tìm sản phẩm để biết ai là Nghệ nhân (Artisan)
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Sản phẩm không tồn tại"));
+    public ChatInitiateResponse initiateChat(ChatRequest request, String customerEmail) {
+        User customer = userRepository.findByEmail(customerEmail)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
-        User artisan = product.getArtisan(); // Giả định Product có quan hệ Artisan
-        User customer = userRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Khách hàng không tồn tại"));
+        User artisan = userRepository.findById(request.getArtisanId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nghệ nhân"));
 
-        // Không cho phép tự chat với chính mình (nếu Artisan tự mua hàng của mình)
-        if (customer.getId()==artisan.getId()) {
-            throw new RuntimeException("Bạn không thể chat yêu cầu với chính mình");
+        // 1. Validate cơ bản
+        if (customer.getId().equals(artisan.getId())) {
+            throw new RuntimeException("Không thể tự gửi yêu cầu cho chính mình");
         }
 
-        // 2. Kiểm tra xem đã có chat đang OPEN chưa
-        Chat chat = chatRepository.findOpenChat(customer.getId(), artisan.getId())
-                .orElseGet(() -> {
-                    // 3. Nếu chưa có, tạo mới
-                    Chat newChat = Chat.builder()
-                            .customer(customer)
-                            .artisan(artisan)
-                            .status(Chat.ChatStatus.PENDING)
-                            .build();
-                    return chatRepository.save(newChat);
-                });
+        Product product = productRepository.findById(request.getProductId()).orElse(null);
 
-        // 4. Trả về thông tin để FE kết nối WebSocket
+        // Mỗi lần gọi API này là một lần mở một "Deal" hoặc "Project" mới
+        Chat newChat = Chat.builder()
+                .customer(customer)
+                .artisan(artisan)
+                .status(Chat.ChatStatus.PENDING)
+                .product(product)
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .budget(request.getBudget())
+                .referenceImage(request.getReferenceImage())
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        Chat savedChat = chatRepository.save(newChat);
+
+        // 3. Trả về kết quả
         return ChatInitiateResponse.builder()
-                .chatId(chat.getId())
+                .chatId(savedChat.getId())
                 .artisanId(artisan.getId())
                 .artisanName(artisan.getUsername())
-                .status(chat.getStatus().name())
-                .socketTopic("/topic/chat/" + chat.getId())
+                .status(savedChat.getStatus().name())
+                .socketTopic("/topic/chat/" + savedChat.getId())
                 .build();
     }
 

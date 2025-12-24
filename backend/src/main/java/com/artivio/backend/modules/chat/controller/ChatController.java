@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import com.artivio.backend.modules.chat.dto.ChatRequest;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -16,17 +18,13 @@ public class ChatController {
     private final ChatService chatService;
 
     // API: GET /api/chat/initiate?productId=10
-    @GetMapping("/initiate")
+    @PostMapping("/initiate")
     public ResponseEntity<ChatInitiateResponse> initiateChat(
-            @RequestParam Long productId,
-            @AuthenticationPrincipal UserDetails userDetails // Lấy user từ Security Context
+            @Valid @RequestBody ChatRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
     ) {
-        // Giả sử lấy ID user từ UserDetails (cần logic trích xuất ID thực tế của bạn)
-        // Ví dụ tạm: Integer userId = Integer.parseInt(userDetails.getUsername());
-        // Trong thực tế bạn có thể cast UserDetails về CustomUserDetails để lấy ID
-       Long customerId = 1L; // HARD CODE ĐỂ TEST, hãy thay bằng logic lấy ID thật
 
-        ChatInitiateResponse response = chatService.initiateChat(customerId, productId);
+        ChatInitiateResponse response = chatService.initiateChat(request, userDetails.getUsername()); // ở đây là email
         return ResponseEntity.ok(response);
     }
 }

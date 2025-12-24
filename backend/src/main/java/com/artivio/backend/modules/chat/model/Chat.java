@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
+import java.util.List;
+
 @Entity
 @Table(name = "chats")
 @Getter
@@ -29,8 +31,18 @@ public class Chat {
     @Column(columnDefinition = "enum('PENDING', 'NEGOTIATING', 'ORDER_CREATED','CLOSED')")
     private ChatStatus status;
 
+    @ManyToOne
+    @JoinColumn(name = "product_id", nullable = true)
+    private Product product;
+
+    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ChatMessage> messages;
+
     @Column(name = "description")
     private String description;
+
+    @Column(name = "title")
+    private String title;
 
     @Column(name = "budget")
     private Double budget;

@@ -49,6 +49,7 @@ CREATE TABLE chats (
                        artisan_id INT NOT NULL,
                        product_id INT NULL,
                        status ENUM('PENDING', 'NEGOTIATING', 'ORDER_CREATED', 'CLOSED') NOT NULL DEFAULT 'PENDING',
+                       title VARCHAR(255) NULL,
                        description TEXT NULL,
                        budget DECIMAL(20,2) NULL,
                        reference_image TEXT NULL,

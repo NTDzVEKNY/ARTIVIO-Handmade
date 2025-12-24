@@ -10,22 +10,18 @@ import Footer from '@/components/common/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getProductById } from '@/services/api';
-import { createCustomRequest } from '@/services/customRequestApi';
 import type { Product } from '@/types';
+import { axiosClient } from '@/lib/axios';
+import useAxiosAuth from '@/hooks/useAxiosAuth';
+import { RawProductResponse } from '@/types/apiTypes';
+import { mapToProduct } from '@/utils/ProductMapper';
+import {useSession} from "next-auth/react";
 
 interface FormData {
     title: string;
     description: string;
-    custom_options: {
-        color: string;
-        size: string;
-        material: string;
-    };
     expected_price: string;
-    deadline: string;
     reference_images: string[];
-    note: string;
 }
 
 interface FormErrors {
@@ -34,6 +30,8 @@ interface FormErrors {
 }
 
 export default function CustomRequestPage() {
+    const { data: session } = useSession();
+    const axiosAuth = useAxiosAuth();
     const params = useParams();
     const router = useRouter();
     const productId = Array.isArray(params.productId) ? Number(params.productId[0]) : Number(params.productId);
@@ -41,19 +39,15 @@ export default function CustomRequestPage() {
     const [product, setProduct] = useState<Product | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+
+    // Đã xóa các trường không cần thiết khỏi state
     const [formData, setFormData] = useState<FormData>({
         title: '',
         description: '',
-        custom_options: {
-            color: '',
-            size: '',
-            material: '',
-        },
         expected_price: '',
-        deadline: '',
         reference_images: [],
-        note: '',
     });
+
     const [errors, setErrors] = useState<FormErrors>({});
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
@@ -66,8 +60,9 @@ export default function CustomRequestPage() {
 
         const fetchProduct = async () => {
             try {
-                const productData = await getProductById(String(productId));
-                setProduct(productData);
+                const productData = await axiosClient.get<RawProductResponse>(`/products/${productId}`);
+                const product = mapToProduct(productData.data);
+                setProduct(product);
             } catch (err) {
                 toast.error('Không tải được thông tin sản phẩm');
                 console.error(err);
@@ -81,17 +76,9 @@ export default function CustomRequestPage() {
 
     const handleInputChange = (field: keyof FormData, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
-        // Clear error when user starts typing
         if (errors[field as keyof FormErrors]) {
             setErrors((prev) => ({ ...prev, [field]: undefined }));
         }
-    };
-
-    const handleCustomOptionChange = (field: keyof FormData['custom_options'], value: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            custom_options: { ...prev.custom_options, [field]: value },
-        }));
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,22 +139,18 @@ export default function CustomRequestPage() {
         setSubmitting(true);
 
         try {
-            const { chat } = await createCustomRequest(productId, {
+            const response = await axiosAuth.post('/chat/initiate', {
+                artisanId: 1,
+                productId: productId,
                 title: formData.title.trim(),
                 description: formData.description.trim(),
-                custom_options: {
-                    color: formData.custom_options.color || undefined,
-                    size: formData.custom_options.size || undefined,
-                    material: formData.custom_options.material || undefined,
-                },
-                expected_price: formData.expected_price ? Number(formData.expected_price) : undefined,
-                deadline: formData.deadline || undefined,
+                budget: formData.expected_price ? Number(formData.expected_price) : undefined,
                 reference_images: formData.reference_images,
-                note: formData.note || undefined,
             });
 
+            console.log(response);
             toast.success('Yêu cầu đã được gửi thành công!');
-            router.push(`/chat/${chat.id}`);
+            // router.push(`/chat/${chat.id}`);
         } catch (error) {
             toast.error('Có lỗi xảy ra khi gửi yêu cầu');
             console.error(error);
@@ -237,7 +220,7 @@ export default function CustomRequestPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-100">
                             <Image
-                                src={product.image || '/hero-handmade.jpg'}
+                                src={product.image ? (product.image.startsWith('//') ? `https:${product.image}` : product.image) : product.image || '/hero-handmade.jpg'}
                                 alt={product.name}
                                 fill
                                 className="object-cover"
@@ -296,73 +279,19 @@ export default function CustomRequestPage() {
                         )}
                     </div>
 
-                    {/* Custom Options */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <Label htmlFor="color">Màu sắc</Label>
-                            <Input
-                                id="color"
-                                type="text"
-                                value={formData.custom_options.color}
-                                onChange={(e) => handleCustomOptionChange('color', e.target.value)}
-                                placeholder="Ví dụ: Xanh dương"
-                                className="mt-2"
-                                disabled={submitting}
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="size">Kích thước</Label>
-                            <Input
-                                id="size"
-                                type="text"
-                                value={formData.custom_options.size}
-                                onChange={(e) => handleCustomOptionChange('size', e.target.value)}
-                                placeholder="Ví dụ: 20cm x 15cm"
-                                className="mt-2"
-                                disabled={submitting}
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="material">Chất liệu</Label>
-                            <Input
-                                id="material"
-                                type="text"
-                                value={formData.custom_options.material}
-                                onChange={(e) => handleCustomOptionChange('material', e.target.value)}
-                                placeholder="Ví dụ: Gốm sứ"
-                                className="mt-2"
-                                disabled={submitting}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Expected Price and Deadline */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <Label htmlFor="expected_price">Giá mong muốn (₫)</Label>
-                            <Input
-                                id="expected_price"
-                                type="number"
-                                value={formData.expected_price}
-                                onChange={(e) => handleInputChange('expected_price', e.target.value)}
-                                placeholder="Ví dụ: 500000"
-                                className="mt-2"
-                                disabled={submitting}
-                                min="0"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="deadline">Ngày hoàn thành mong muốn</Label>
-                            <Input
-                                id="deadline"
-                                type="date"
-                                value={formData.deadline}
-                                onChange={(e) => handleInputChange('deadline', e.target.value)}
-                                className="mt-2"
-                                disabled={submitting}
-                                min={new Date().toISOString().split('T')[0]}
-                            />
-                        </div>
+                    {/* Expected Price (Đã bỏ Grid và Deadline) */}
+                    <div>
+                        <Label htmlFor="expected_price">Giá mong muốn (₫)</Label>
+                        <Input
+                            id="expected_price"
+                            type="number"
+                            value={formData.expected_price}
+                            onChange={(e) => handleInputChange('expected_price', e.target.value)}
+                            placeholder="Ví dụ: 500000"
+                            className="mt-2"
+                            disabled={submitting}
+                            min="0"
+                        />
                     </div>
 
                     {/* Reference Images */}
@@ -412,20 +341,6 @@ export default function CustomRequestPage() {
                         )}
                     </div>
 
-                    {/* Additional Notes */}
-                    <div>
-                        <Label htmlFor="note">Ghi chú thêm</Label>
-                        <textarea
-                            id="note"
-                            value={formData.note}
-                            onChange={(e) => handleInputChange('note', e.target.value)}
-                            placeholder="Bất kỳ thông tin bổ sung nào bạn muốn chia sẻ..."
-                            rows={3}
-                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
-                            disabled={submitting}
-                        />
-                    </div>
-
                     {/* Submit Button */}
                     <div className="flex gap-4 pt-4">
                         <Button
@@ -435,28 +350,28 @@ export default function CustomRequestPage() {
                         >
                             {submitting ? (
                                 <span className="flex items-center gap-2">
-                  <svg
-                      className="animate-spin h-5 w-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                  >
-                    <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                    />
-                    <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Đang gửi...
-                </span>
+                                  <svg
+                                      className="animate-spin h-5 w-5"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                    />
+                                    <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    />
+                                  </svg>
+                                  Đang gửi...
+                                </span>
                             ) : (
                                 'Gửi yêu cầu'
                             )}
