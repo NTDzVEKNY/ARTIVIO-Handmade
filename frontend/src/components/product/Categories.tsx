@@ -12,7 +12,7 @@ const categoryIcons: { [key: string]: string } = {
     "Quà tặng": "🎁",
     "Thiệp handmade": "💌",
     "Phụ kiện & nguyên liệu": "🧵",
-    "Vải decor": "🎨",
+    "Vải decor": "🧣",
     "Ví & passport": "💼",
     "Limited": "🌟",
 };

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
 import {useCart} from '@/contexts/CartContext';
+import toast, { Toaster } from 'react-hot-toast';
 import {isProductOutOfStock, getStockStatusText} from '@/lib/inventory';
 import { axiosClient} from "@/lib/axios";
 import { RawProductResponse} from "@/types/apiTypes";
@@ -39,7 +40,6 @@ export default function ProductDetailPage() {
                 const productData = await axiosClient.get<RawProductResponse>(`/products/${productId}`);
                 const productWithCategory = mapToProductWithCategory(productData.data);
                 setProduct(productWithCategory);
-                setQuantity(productWithCategory.stock_quantity);
                 setCategoryName(productWithCategory.categoryName);
             } catch (err) {
                 setError('Không tải được sản phẩm');
@@ -66,6 +66,11 @@ export default function ProductDetailPage() {
         }
         const min = 1;
         const max = product?.stock_quantity ?? 9999;
+
+        if (parsed > max) {
+            toast.error(`Số lượng tồn kho chỉ còn ${max} sản phẩm.`);
+        }
+
         const clamped = Math.max(min, Math.min(max, Math.floor(parsed)));
         setQuantity(clamped);
     };
@@ -76,7 +81,7 @@ export default function ProductDetailPage() {
         addItem({
             id: product.id,
             productName: product.name,
-            price: String(product.price ?? 0),
+            price: Number(product.price ?? 0),
             image: product.image ? (product.image.startsWith('//') ? `https:${product.image}` : product.image) : product.image || '/hero-handmade.jpg',
             stockQuantity: product.stock_quantity,
             quantity: quantity,
@@ -94,6 +99,7 @@ export default function ProductDetailPage() {
 
     return (
         <div className="min-h-screen font-sans text-gray-800 bg-white">
+            <Toaster position="top-center" />
             <Header/>
 
             <main className="container mx-auto px-6 py-12">
