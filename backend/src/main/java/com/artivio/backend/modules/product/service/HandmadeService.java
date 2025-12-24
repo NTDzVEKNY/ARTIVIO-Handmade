@@ -178,6 +178,17 @@ public class HandmadeService {
                 predicates.add(cb.like(cb.lower(root.get("name")), likePattern));
             }
 
+            // 3. Lọc theo khoảng giá min price và max price(nếu có)
+            if (filter.getMinPrice() != null && filter.getMaxPrice() != null) {
+                predicates.add(cb.between(root.get("price"), filter.getMinPrice(), filter.getMaxPrice()));
+            }
+            if (filter.getMinPrice() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.getMinPrice()));
+            }
+            if (filter.getMaxPrice() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.getMaxPrice()));
+            }
+
             // 3. Đảm bảo status là ACTIVE (Logic ẩn thường có)
             // predicates.add(cb.equal(root.get("status"), "ACTIVE"));
 

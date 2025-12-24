@@ -20,6 +20,11 @@ public class ProductFilterDto {
     private int page = 0;
     private int size = 20;
 
+    // Price Range: Mặc định là all (ko lọc)
+    private Double minPrice;
+    private Double maxPrice;
+
+
     // Getter tiện ích để lấy keyword sạch
     public String getKeyword() {
         return (keyword != null) ? keyword.trim() : null;
