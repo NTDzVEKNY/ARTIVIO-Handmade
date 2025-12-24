@@ -9,7 +9,6 @@ import Footer from '@/components/common/Footer';
 import type { StoredOrder } from '@/lib/ordersStorage';
 import { fetchApi } from '@/services/api';
 import { RawOrderDetail } from '@/types/apiTypes';
-import { getStoredOrders } from '@/lib/ordersStorage';
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
@@ -27,17 +26,7 @@ export default function CheckoutSuccessPage() {
 
     const fetchOrder = async () => {
       try {
-        // First, try to get from localStorage (faster, no API call needed)
-        const storedOrders = getStoredOrders();
-        const storedOrder = storedOrders.find((o) => o.id === Number(orderId));
-        
-        if (storedOrder) {
-          setOrder(storedOrder);
-          setLoading(false);
-          return;
-        }
-
-        // If not in localStorage, fetch from backend
+        // Fetch order from backend API
         const orderData = await fetchApi<RawOrderDetail>(`/orders/${orderId}`);
         
         // Map backend response to StoredOrder format
@@ -261,7 +250,7 @@ export default function CheckoutSuccessPage() {
                   <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                     {item.image && (
                       <Image
-                        src={item.image}
+                        src={item.image?.startsWith('//') ? `https:${item.image}` : item.image || '/artivio-logo.png'}
                         alt={item.productName}
                         fill
                         className="object-cover"

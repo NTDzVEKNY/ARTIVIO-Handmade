@@ -4,6 +4,7 @@ package com.artivio.backend.modules.order.controller;
 import com.artivio.backend.modules.order.dto.OrderRequestDTO;
 import com.artivio.backend.modules.order.model.Order;
 import com.artivio.backend.modules.order.service.OrderService;
+import com.artivio.backend.modules.order.repository.UserRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
 import com.artivio.backend.modules.order.dto.OrderDetailDTO;
 import com.artivio.backend.modules.order.dto.OrderStatusUpdateResponseDTO;
+import com.artivio.backend.modules.order.dto.AdminOrderListDTO;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,10 +29,14 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @PostMapping("/create") // Hoặc đường dẫn bạn muốn
     public ResponseEntity<?> createOrder(
             @Valid @RequestBody OrderRequestDTO orderRequest,
-            BindingResult result // Thêm cái này để hứng lỗi validate
+            BindingResult result, // Thêm cái này để hứng lỗi validate
+            @AuthenticationPrincipal UserDetails userDetails // Optional: get user if authenticated
     ) {
         // 1. Kiểm tra lỗi Validate (SĐT sai, thiếu tên...)
         if (result.hasErrors()) {
@@ -44,6 +50,14 @@ public class OrderController {
         }
 
         try {
+            // If user is authenticated, set their customerId
+            // This allows registered users to have their orders linked to their account
+            if (userDetails != null && orderRequest.getCustomerId() == null) {
+                // Get user ID from email
+                userRepository.findByEmail(userDetails.getUsername())
+                    .ifPresent(user -> orderRequest.setCustomerId(user.getId()));
+            }
+            
             Order newOrder = orderService.createOrder(orderRequest);
             return ResponseEntity.ok(newOrder);
         } catch (Exception e) {
@@ -141,5 +155,11 @@ public class OrderController {
 
         // Truyền email xuống Service
         return ResponseEntity.ok(orderService.getAllMyOrders(email));
+    }
+
+    // LẤY TẤT CẢ ĐƠN HÀNG CHO ADMIN
+    @GetMapping("/admin/all")
+    public ResponseEntity<List<AdminOrderListDTO>> getAllOrdersForAdmin() {
+        return ResponseEntity.ok(orderService.getAllOrdersForAdmin());
     }
 }

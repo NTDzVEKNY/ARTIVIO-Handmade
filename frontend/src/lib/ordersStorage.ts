@@ -31,10 +31,20 @@ export type StoredOrder = {
   items: StoredOrderItem[];
 };
 
+/**
+ * @deprecated Orders are now stored in the database. These functions are kept for backward compatibility
+ * but should not be used. Use API endpoints instead:
+ * - GET /api/orders/admin/all - for admin orders list
+ * - GET /api/orders/{id} - for order details
+ * - PUT /api/orders/{id}/status - for updating order status
+ */
 const ORDERS_STORAGE_KEY = 'artivio_admin_orders';
 
 const isBrowser = () => typeof window !== 'undefined';
 
+/**
+ * @deprecated Use API endpoint GET /api/orders/admin/all instead
+ */
 export function getStoredOrders(): StoredOrder[] {
   if (!isBrowser()) return [];
 
@@ -50,6 +60,9 @@ export function getStoredOrders(): StoredOrder[] {
   }
 }
 
+/**
+ * @deprecated Orders are stored in database, no need to save to localStorage
+ */
 export function saveStoredOrders(orders: StoredOrder[]): void {
   if (!isBrowser()) return;
 
@@ -60,6 +73,9 @@ export function saveStoredOrders(orders: StoredOrder[]): void {
   }
 }
 
+/**
+ * @deprecated Orders are automatically saved to database when created via API
+ */
 export function appendOrderToStorage(order: StoredOrder): StoredOrder[] {
   const current = getStoredOrders();
   const nextOrders = [...current.filter((item) => item.id !== order.id), order].sort(
@@ -70,6 +86,9 @@ export function appendOrderToStorage(order: StoredOrder): StoredOrder[] {
   return nextOrders;
 }
 
+/**
+ * @deprecated Use API endpoint PUT /api/orders/{id}/status instead
+ */
 export function updateOrderStatus(orderId: number, status: StoredOrderStatus): StoredOrder[] {
   const orders = getStoredOrders();
   const nextOrders = orders.map((order) =>

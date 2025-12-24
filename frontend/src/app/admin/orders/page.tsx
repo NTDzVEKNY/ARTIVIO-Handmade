@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -13,41 +13,31 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, Loader2, CheckCircle2, Truck, PackageCheck, XCircle } from 'lucide-react';
 import {
-  getStoredOrders,
-  updateOrderStatus,
   type StoredOrder,
   type StoredOrderStatus,
 } from '@/lib/ordersStorage';
 import type { PaymentMethod } from '@/types';
 import Image from 'next/image';
 import { fetchApi } from '@/services/api';
-import { mapFrontendToBackendStatus } from '@/utils/orderStatusMapper';
+import { mapFrontendToBackendStatus, mapBackendToFrontendStatus } from '@/utils/orderStatusMapper';
 import toast, { Toaster } from 'react-hot-toast';
+import type { RawAdminOrderList } from '@/types/apiTypes';
 
 
-const statusConfig: Record<
+// Simplified status configuration - only 4 statuses: pending, processing, delivered, cancelled
+const statusConfig: Partial<Record<
   StoredOrderStatus,
   { label: string; badgeClass: string; description: string }
-> = {
+>> = {
   pending: {
     label: 'Chờ xử lý',
     badgeClass: 'bg-gray-200 text-gray-700 border-transparent',
     description: 'Đơn hàng mới, chờ xác nhận',
   },
-  confirmed: {
-    label: 'Đã xác nhận',
-    badgeClass: 'bg-blue-100 text-blue-700 border-transparent',
-    description: 'Đã xác nhận, chuẩn bị xử lý',
-  },
   processing: {
     label: 'Đang xử lý',
     badgeClass: 'bg-orange-100 text-orange-700 border-transparent',
     description: 'Đang đóng gói / chuẩn bị giao',
-  },
-  shipped: {
-    label: 'Đã giao cho DVVC',
-    badgeClass: 'bg-purple-100 text-purple-700 border-transparent',
-    description: 'Đang vận chuyển',
   },
   delivered: {
     label: 'Đã giao',
@@ -59,6 +49,18 @@ const statusConfig: Record<
     badgeClass: 'bg-red-100 text-red-700 border-transparent',
     description: 'Đơn hàng đã bị hủy',
   },
+  // Keep confirmed and shipped for backward compatibility with existing data
+  // but they won't appear in the dropdown
+  confirmed: {
+    label: 'Đã xác nhận',
+    badgeClass: 'bg-blue-100 text-blue-700 border-transparent',
+    description: 'Đã xác nhận, chuẩn bị xử lý',
+  },
+  shipped: {
+    label: 'Đã giao cho DVVC',
+    badgeClass: 'bg-purple-100 text-purple-700 border-transparent',
+    description: 'Đang vận chuyển',
+  },
 };
 
 const paymentLabels: Record<PaymentMethod, string> = {
@@ -69,16 +71,77 @@ const paymentLabels: Record<PaymentMethod, string> = {
 
 const formatCurrency = (value: number) => `₫${value.toLocaleString('vi-VN')}`;
 
+// Map backend order to frontend StoredOrder format
+const mapAdminOrderToStoredOrder = (rawOrder: RawAdminOrderList): StoredOrder => {
+  const mapBackendPaymentMethodToFrontend = (backendMethod: string): PaymentMethod => {
+    switch (backendMethod) {
+      case 'COD':
+        return 'cod';
+      case 'ONLINE':
+        return 'bank_transfer';
+      default:
+        return 'cod';
+    }
+  };
+
+  // Normalize status: convert confirmed/shipped to simplified statuses
+  const normalizeStatus = (status: StoredOrderStatus): StoredOrderStatus => {
+    if (status === 'confirmed') return 'pending'; // confirmed → pending
+    if (status === 'shipped') return 'processing'; // shipped → processing
+    return status; // Keep pending, processing, delivered, cancelled as is
+  };
+
+  return {
+    id: rawOrder.id,
+    orderNumber: rawOrder.orderNumber,
+    customerName: rawOrder.customerName,
+    phone: rawOrder.phone,
+    status: normalizeStatus(mapBackendToFrontendStatus(rawOrder.status)),
+    createdAt: rawOrder.createdAt,
+    subtotal: Number(rawOrder.subtotal),
+    shippingFee: Number(rawOrder.shippingFee || 0),
+    total: Number(rawOrder.total),
+    paymentMethod: mapBackendPaymentMethodToFrontend(rawOrder.paymentMethod),
+    shippingAddress: {
+      fullName: rawOrder.customerName,
+      phone: rawOrder.phone,
+      email: '', // Backend doesn't provide email
+      address: rawOrder.shippingAddress,
+      note: rawOrder.note || undefined,
+    },
+    items: rawOrder.items.map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+      quantity: item.quantity,
+      price: Number(item.price),
+      image: item.image || undefined,
+    })),
+  };
+};
+
 const AdminOrdersPage = () => {
   const [orders, setOrders] = useState<StoredOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<StoredOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const stored = getStoredOrders();
-    setOrders(stored);
-    setIsLoading(false);
+  const fetchOrders = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const rawOrders = await fetchApi<RawAdminOrderList[]>('/orders/admin/all');
+      const mappedOrders = rawOrders.map(mapAdminOrderToStoredOrder);
+      setOrders(mappedOrders);
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+      toast.error('Không thể tải danh sách đơn hàng');
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const totalRevenue = useMemo(
     () => orders.reduce((sum, order) => sum + order.total, 0),
@@ -95,9 +158,8 @@ const AdminOrdersPage = () => {
         method: 'PUT',
       });
       
-      // Update localStorage for local state
-      const updatedOrders = updateOrderStatus(orderId, status);
-      setOrders(updatedOrders);
+      // Refresh orders from API to get updated data
+      await fetchOrders();
       
       toast.success('Cập nhật trạng thái đơn hàng thành công');
     } catch (error: any) {
@@ -124,10 +186,12 @@ const AdminOrdersPage = () => {
     </div>
   );
 
+  // Simplified: removed quick action buttons, only using dropdown
+  // Keeping this for potential future use but not currently used
   const actionButtonDisabled = {
     confirm: (status: StoredOrderStatus) => status !== 'pending',
-    ship: (status: StoredOrderStatus) => status !== 'confirmed' && status !== 'processing',
-    deliver: (status: StoredOrderStatus) => status !== 'shipped',
+    ship: (status: StoredOrderStatus) => status !== 'processing',
+    deliver: (status: StoredOrderStatus) => status !== 'processing',
     cancel: (status: StoredOrderStatus) => status === 'delivered' || status === 'cancelled',
   };
 
@@ -204,8 +268,8 @@ const AdminOrdersPage = () => {
                   <TableCell className="font-semibold">{formatCurrency(order.total)}</TableCell>
                   <TableCell className="text-sm">{paymentLabels[order.paymentMethod]}</TableCell>
                   <TableCell>
-                    <Badge className={statusConfig[order.status].badgeClass}>
-                      {statusConfig[order.status].label}
+                    <Badge className={statusConfig[order.status]?.badgeClass || 'bg-gray-200 text-gray-700 border-transparent'}>
+                      {statusConfig[order.status]?.label || order.status}
                     </Badge>
                   </TableCell>
                   <TableCell>{new Date(order.createdAt).toLocaleString('vi-VN')}</TableCell>
@@ -226,9 +290,10 @@ const AdminOrdersPage = () => {
                           onChange={(e) => handleStatusChange(order.id, e.target.value as StoredOrderStatus)}
                           className="rounded-md border border-[#E8D5B5] bg-white px-2 py-1 text-sm"
                         >
-                          {Object.keys(statusConfig).map((status) => (
+                          {/* Only show the 4 simplified statuses: pending, processing, delivered, cancelled */}
+                          {(['pending', 'processing', 'delivered', 'cancelled'] as StoredOrderStatus[]).map((status) => (
                             <option key={status} value={status}>
-                              {statusConfig[status as StoredOrderStatus].label}
+                              {statusConfig[status]?.label}
                             </option>
                           ))}
                         </select>
@@ -254,8 +319,8 @@ const AdminOrdersPage = () => {
                   {selectedOrder.orderNumber}
                 </h3>
               </div>
-              <Badge className={statusConfig[selectedOrder.status].badgeClass}>
-                {statusConfig[selectedOrder.status].label}
+              <Badge className={statusConfig[selectedOrder.status]?.badgeClass || 'bg-gray-200 text-gray-700 border-transparent'}>
+                {statusConfig[selectedOrder.status]?.label || selectedOrder.status}
               </Badge>
             </div>
 
@@ -303,7 +368,7 @@ const AdminOrdersPage = () => {
                       {/* Ảnh sản phẩm */}
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#E8D5B5]">
                         <Image
-                          src={item.image || '/placeholder.png'}
+                          src={item.image?.startsWith('//') ? `https:${item.image}` : item.image || '/placeholder.png'}
                           alt={item.productName}
                           fill
                           sizes="56px"

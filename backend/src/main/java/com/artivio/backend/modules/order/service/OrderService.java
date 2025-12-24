@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
 import com.artivio.backend.modules.order.dto.OrderDetailDTO;
+import com.artivio.backend.modules.order.dto.AdminOrderListDTO;
 
 
 import java.math.BigDecimal;
@@ -220,5 +221,13 @@ public class OrderService {
 
         List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(user.getId());
         return orders.stream().map(orderMapper::mapToDTO).collect(Collectors.toList());
+    }
+
+    // --- LẤY TẤT CẢ ĐƠN HÀNG CHO ADMIN ---
+    public List<AdminOrderListDTO> getAllOrdersForAdmin() {
+        List<Order> orders = orderRepository.findAll();
+        // Sort by created date descending
+        orders.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+        return orders.stream().map(orderMapper::mapToAdminListDTO).collect(Collectors.toList());
     }
 }

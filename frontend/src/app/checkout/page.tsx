@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { ShippingAddress, PaymentMethod } from '@/types';
 import { fetchApi } from '@/services/api';
-import { appendOrderToStorage } from '@/lib/ordersStorage';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -122,38 +121,6 @@ export default function CheckoutPage() {
       // Extract order ID from response
       const orderId = response.id;
       const orderNumber = `ART-${orderId}`;
-
-      // Map backend status to frontend status format
-      const mapStatus = (backendStatus: string): 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' => {
-        const statusUpper = backendStatus.toUpperCase();
-        if (statusUpper === 'PENDING') return 'pending';
-        if (statusUpper === 'IN_PROGRESS') return 'processing';
-        if (statusUpper === 'COMPLETED') return 'delivered';
-        if (statusUpper === 'CANCELLED') return 'cancelled';
-        return 'pending'; // default
-      };
-
-      // Store order locally for frontend use
-      appendOrderToStorage({
-        id: orderId,
-        orderNumber,
-        customerName: shippingAddress.fullName,
-        phone: phoneNumber,
-        status: mapStatus(response.status),
-        createdAt: response.createdAt || new Date().toISOString(),
-        subtotal,
-        shippingFee,
-        total: Number(response.totalPrice) || total,
-        paymentMethod,
-        shippingAddress,
-        items: items.map((item) => ({
-          productId: item.id,
-          productName: item.productName,
-          quantity: item.quantity,
-          price: Number(item.price),
-          image: item.image,
-        })),
-      });
 
       // Clear cart after successful order
       clearCart();
