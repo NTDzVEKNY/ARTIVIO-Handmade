@@ -73,7 +73,7 @@ export default function CartPage() {
                                             <Link href={`/shop/id/${item.id}`} className="flex-shrink-0">
                                                 <div className="relative w-full sm:w-32 h-32 rounded-lg overflow-hidden bg-gray-100">
                                                     <Image
-                                                        src={item.image || '/hero-handmade.jpg'}
+                                                        src={item.image ? (item.image.startsWith('//') ? `https:${item.image}` : item.image) : item.image || '/hero-handmade.jpg'}
                                                         alt={item.productName}
                                                         fill
                                                         className="object-cover"

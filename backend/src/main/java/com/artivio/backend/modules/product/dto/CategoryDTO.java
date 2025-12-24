@@ -10,4 +10,10 @@ import lombok.NoArgsConstructor;
 public class CategoryDTO {
     private Long categoryId;
     private String categoryName;
+    private String slug;
+    private Long parentId;
+    private String createdAt;
+    private String updatedAt;
+    private Long soldCount;
+
 }

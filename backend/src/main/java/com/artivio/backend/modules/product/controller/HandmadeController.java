@@ -12,22 +12,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
+import com.artivio.backend.modules.product.dto.request.ProductFilterDto;
+import com.artivio.backend.modules.product.dto.response.PaginatedResponseDto;
+import com.artivio.backend.modules.product.dto.response.ProductResponseDto;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("api")
+@RequiredArgsConstructor
 public class HandmadeController {
-    @Autowired
-    private HandmadeService handmadeService;
+    private final HandmadeService handmadeService;
 
+    // GET ALL
     @GetMapping("/products")
-    public ResponseEntity<PagedResponse<ProductDTO>> getProducts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+    public ResponseEntity<PaginatedResponseDto<ProductResponseDto>> getProducts(
+            @ModelAttribute ProductFilterDto filterDto
     ){
-        Page<ProductDTO> products = handmadeService.getAllProducts(page, size);
-        PagedResponse<ProductDTO> response = new PagedResponse<>(products);
+        PaginatedResponseDto<ProductResponseDto> response = handmadeService.getAllProducts(filterDto);
+
         return ResponseEntity.ok(response);
     }
 

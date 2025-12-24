@@ -7,6 +7,7 @@ import com.artivio.backend.modules.product.model.Category;
 import com.artivio.backend.modules.product.model.Product;
 import org.springframework.stereotype.Component;
 import com.artivio.backend.modules.product.model.enums.EnumStatus;
+import com.artivio.backend.modules.product.dto.response.ProductResponseDto;
 
 @Component
 public class ProductMapper {
@@ -54,5 +55,29 @@ public class ProductMapper {
         dto.setMaterial("Đang cập nhật");
 
         return dto;
+    }
+
+    public ProductResponseDto toResponseDto(Product product) {
+        if (product == null) {
+            return null;
+        }
+
+        return ProductResponseDto.builder()
+                .id(product.getId())
+                .name(product.getProductName())
+                .price(product.getPrice())
+                .image(product.getImage())
+                .description(product.getDescription())
+                .quantitySold(product.getQuantitySold())
+                .stockQuantity(product.getStockQuantity())
+                .status(product.getStatus().toString())
+                .createdAt(product.getCreatedAt())
+                .updatedAt(product.getUpdatedAt())
+
+                // Xử lý logic Category (Quan trọng)
+                // Cần kiểm tra null để tránh NullPointerException nếu product chưa có category
+                .categoryId(product.getCategory() != null ? product.getCategory().getCategoryId() : null)
+                .categoryName(product.getCategory() != null ? product.getCategory().getCategoryName() : null)
+                .build();
     }
 }

@@ -1,6 +1,6 @@
 export type Product = {
 	id: number;
-	artisan_id: number;
+	artisan_id: number | null;
 	category_id: number | null;
 	name: string;
 	description: string | null;
@@ -25,7 +25,7 @@ export type Category = {
 export type CartItem = {
   id: number;
   productName: string;
-  price: string;
+  price: number;
   image?: string;
   quantity: number;
   stockQuantity?: number;

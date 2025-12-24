@@ -103,7 +103,8 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                                             <Link href={`/shop/id/${item.id}`} onClick={onClose} className="flex-shrink-0">
                                                 <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
                                                     <Image
-                                                        src={item.image || '/hero-handmade.jpg'}
+
+                                                        src={item.image ? (item.image.startsWith('//') ? `https:${item.image}` : item.image) : item.image || '/hero-handmade.jpg'}
                                                         alt={item.productName}
                                                         fill
                                                         className="object-cover"
