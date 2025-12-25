@@ -12,31 +12,61 @@ export default withAuth(
     const isAdmin = isAuth && token?.role === 'ADMIN';
 
     // Helper function to create a redirect response
-    const redirect = (url: string) => NextResponse.redirect(new URL(url, request.url));
+    const redirect = (url: string) => {
+      const newUrl = new URL(url, request.url);
+      // Add callbackUrl for a better login experience
+      if (url === '/login' && pathname !== '/login') {
+        newUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+      }
+      return NextResponse.redirect(newUrl);
+    };
 
-    // Rule 1: Bảo vệ các trang của Admin. Đây là ưu tiên cao nhất.
+    // --- Admin-specific Logic ---
+    if (isAdmin) {
+      // Admins can access their dashboard pages AND the shared chat pages.
+      if (pathname.startsWith('/admin') || pathname.startsWith('/chat')) {
+        return NextResponse.next();
+      }
+      // For any other client-only page (cart, checkout, account, etc.), redirect them to the admin dashboard.
+      return redirect('/admin');
+    }
+
+    // --- Guest & Regular User Logic ---
+
+    // Rule 1: Protect Admin pages from non-admins.
     if (pathname.startsWith('/admin')) {
-      if (!isAdmin) {
-        // Nếu không phải admin, luôn chuyển hướng về trang đăng nhập.
+      // If a non-admin (authenticated or not) tries to access an admin page, send them to login.
+      return redirect('/login');
+    }
+
+    // Rule 2: Protect user-specific pages that require login for non-admins.
+    const userProtectedPaths = [
+      '/account',
+      '/cart',
+      '/checkout',
+      '/custom-request',
+      '/chat',
+      '/orders',
+    ];
+
+    if (userProtectedPaths.some((path) => pathname.startsWith(path))) {
+      if (!isAuth) {
+        // If a guest tries to access a protected page, redirect to login.
         return redirect('/login');
       }
-      // Nếu là admin, cho phép truy cập và kết thúc xử lý tại đây.
-      return NextResponse.next();
     }
 
-    // Rule 2: Xử lý các trường hợp cho người dùng đã đăng nhập ở các trang công khai.
+    // Rule 3: Handle authenticated non-admins on auth pages.
     if (isAuth) {
-      // Nếu người dùng đã đăng nhập truy cập trang login, chuyển hướng họ đi.
-      if (pathname.startsWith('/login')) {
-        return redirect(isAdmin ? '/admin' : '/');
-      }
-      // Nếu admin truy cập trang chủ, chuyển hướng đến trang admin.
-      if (isAdmin && pathname === '/') {
-        return redirect('/admin');
+      // If a logged-in user is on the login/signup page, redirect to the homepage.
+      if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
+        return redirect('/');
       }
     }
 
-    // Rule 3: Nếu không rơi vào các quy tắc trên (VD: khách hoặc user truy cập trang công khai), cho phép đi tiếp.
+    // Rule 4: Allow all other requests.
+    // This covers guests on public pages (like '/', '/shop/*')
+    // and authenticated users on public or their own protected pages.
     return NextResponse.next();
   },
   {

@@ -119,10 +119,6 @@ export default function AdminLayout({
           <Package className="h-5 w-5" />
           {!isCollapsed && 'Sản phẩm'}
         </NavLink>
-        <NavLink href="/admin/customers" isCollapsed={isCollapsed}>
-          <Users className="h-5 w-5" />
-          {!isCollapsed && 'Khách hàng'}
-        </NavLink>
         <NavLink href="/admin/chat" isCollapsed={isCollapsed}>
           <MessageSquare className="h-5 w-5" />
           {!isCollapsed && 'Chat'}
