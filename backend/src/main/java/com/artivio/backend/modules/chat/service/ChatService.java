@@ -213,4 +213,12 @@ public class ChatService {
 
         return chats.stream().map(chatMapper::toResponse).collect(Collectors.toList());
     }
+
+    public List<ChatDataResponse> getAllChats() {
+        List<Chat> allChats = chatRepository.findAllByOrderByCreatedAtDesc();
+
+        return allChats.stream()
+                .map(chatMapper::toResponse)
+                .collect(Collectors.toList());
+    }
 }

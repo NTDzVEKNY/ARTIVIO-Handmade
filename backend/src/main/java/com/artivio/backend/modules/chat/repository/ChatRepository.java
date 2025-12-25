@@ -13,4 +13,5 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
     @Query("SELECT c FROM Chat c WHERE c.customer.id = :customerId AND c.artisan.id = :artisanId AND c.status = 'OPEN'")
     Optional<Chat> findOpenChat(Long customerId, Long artisanId);
     List<Chat> findByCustomerOrderByCreatedAtDesc(User customer);
+    List<Chat> findAllByOrderByCreatedAtDesc();
 }
