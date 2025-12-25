@@ -20,11 +20,12 @@ import java.time.LocalDateTime;
 @Builder
 public class Product {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
 
     @Column(name = "artisan_id")
-    private Long artisan_id;
+    private Long artisan_id = 1L;
 
     @ManyToOne
     @JoinColumn(name = "category_id")
