@@ -34,12 +34,13 @@ export const mapToChat = (raw: RawChatDataResponse): Chat => {
  * Cần truyền thêm chatId vào vì RawChatMessage bên trong list không có field này
  */
 export const mapToChatMessage = (raw: RawChatMessage, chatId: number): ChatMessage => {
+    console.log('raw', raw.image);
     return {
         id: raw.id,
         chat_id: chatId,
         sender_id: raw.senderId,
         sender_type: raw.senderType as ChatMessage['sender_type'], // 'CUSTOMER' | 'ARTISAN'
-        is_image: raw.isImage,
+        is_image: raw.image,
         content: raw.message,
         created_at: raw.createdAt,
     };

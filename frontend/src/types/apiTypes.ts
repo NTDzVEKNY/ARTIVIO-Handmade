@@ -106,7 +106,7 @@ export interface RawChatMessage {
     id: number;
     senderId: number;
     senderType: string; // 'CUSTOMER' | 'ARTISAN'
-    isImage: boolean;
+    image: boolean;
     message: string;
     createdAt: string;
 }

@@ -54,6 +54,7 @@ public class SecurityConfig {
 
                         // WebSocket (Note: Check specific WS security in WebSocketConfig)
                         .requestMatchers("/api/chat/**", "/ws/**", "/ws-raw/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
 
                         // Swagger UI (Optional, but usually needed)
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()

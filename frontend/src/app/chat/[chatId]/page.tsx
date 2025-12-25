@@ -19,6 +19,13 @@ import useAxiosAuth from '@/hooks/useAxiosAuth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+// Helper function để lấy full URL
+const getFullImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path; // Nếu đã là link full (ví dụ Cloudinary)
+    return `${API_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 export default function ChatPage() {
     const { data: session } = useSession();
     const axiosAuth = useAxiosAuth();
@@ -252,10 +259,11 @@ export default function ChatPage() {
                                                 <div className="relative w-full min-w-[200px] h-48 rounded-lg overflow-hidden mb-2 bg-gray-300">
                                                     {/* Lưu ý: Check next.config.js domain */}
                                                     <Image
-                                                        src={message.content}
+                                                        src={getFullImageUrl(message.content)}
                                                         alt="Message image"
                                                         fill
                                                         className="object-cover"
+                                                        onClick={() => window.open(getFullImageUrl(message.content), '_blank')}
                                                     />
                                                 </div>
                                             ) : (
