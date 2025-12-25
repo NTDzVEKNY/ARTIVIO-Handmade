@@ -96,6 +96,10 @@ const NewProductPage = () => {
 
             toast.success('Tạo sản phẩm mới thành công!');
             router.push('/admin/products');
+            // router.refresh() được dùng để yêu cầu Next.js làm mới lại dữ liệu ở route hiện tại.
+            // Khi được gọi sau router.push(), nó sẽ đảm bảo rằng khi trang danh sách sản phẩm
+            // được tải, nó sẽ lấy dữ liệu mới nhất từ server thay vì từ cache.
+            router.refresh();
         } catch (error: any) {
             console.error('Create product error:', error);
             // Xử lý thông báo lỗi chi tiết hơn nếu server trả về message
