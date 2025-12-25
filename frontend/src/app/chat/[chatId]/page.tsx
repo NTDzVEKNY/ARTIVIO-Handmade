@@ -63,34 +63,6 @@ export default function ChatPage() {
 
         const loadChatData = async () => {
             try {
-                // const [chatData, userData] = await Promise.all([
-                //     getChatById(chatId),
-                //     getCurrentUser(),
-                // ]);
-                //
-                // if (!chatData) {
-                //     toast.error('Không tìm thấy cuộc trò chuyện');
-                //     return;
-                // }
-                //
-                // setChat(chatData);
-                // setCurrentUser(userData);
-                //
-                // // Load artisan info
-                // if (chatData.artisan_id) {
-                //     const artisanData = await getArtisanById(chatData.artisan_id);
-                //     setArtisan(artisanData);
-                // }
-                //
-                // // Lấy tin nhắn lần đầu
-                // let msgs = await getChatMessages(chatId);
-                //
-                // // Mock data logic (nếu cần)
-                // if (msgs.length === 0) {
-                //     await initializeMockChat(chatId); // Cẩn thận hàm này nếu chạy production
-                //     msgs = await getChatMessages(chatId);
-                // }
-                // setMessages(msgs);
                 const rawData = await axiosAuth.get<RawChatDataResponse>(`/chat/chatData?chatId=${chatId}`);
                 const mappedData = mapChatDetails(rawData.data);
                 setChat(mappedData.chat);
@@ -117,15 +89,6 @@ export default function ChatPage() {
 
         const intervalId = setInterval(async () => {
             try {
-                // const latestMessages = await getChatMessages(chatId);
-                // // Chỉ cập nhật nếu số lượng tin nhắn thay đổi để tránh re-render thừa
-                // setMessages((prev) => {
-                //     if (prev.length !== latestMessages.length) {
-                //         return latestMessages;
-                //     }
-                //     return prev;
-                // });
-
                 const latestMessages = await axiosAuth.get<RawChatMessage[]>(`/chat/getMessages?chatId=${chatId}`);
                 const mappedMessages = latestMessages.data.map((msg) => mapToChatMessage(msg, chatId));
                 setMessages((prev) => {
