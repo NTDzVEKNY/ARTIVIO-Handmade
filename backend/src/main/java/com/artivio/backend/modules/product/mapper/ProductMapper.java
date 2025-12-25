@@ -21,6 +21,9 @@ public class ProductMapper {
                 .description(dto.getDescription())
                 .quantitySold(0)
                 .category(category)
+                .createdAt(java.time.LocalDateTime.now())
+                .updatedAt(java.time.LocalDateTime.now())
+                .artisan_id(1L)
                 .build();
     }
 

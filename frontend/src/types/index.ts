@@ -79,6 +79,7 @@ export type ChatMessage = {
     sender_id: number;
     sender_type: 'CUSTOMER' | 'ARTISAN';
     is_image: boolean;
+    type: 'TEXT' | 'IMAGE' | 'ORDER_PROPOSAL';
     content: string;
     created_at: string;
 };

@@ -18,6 +18,7 @@ public class ChatMessageResponse {
     private Long senderId;
     private ChatMessage.SenderType senderType;
     private boolean isImage;
+    private ChatMessage.EnumMessageType type;
     private String message;
     private LocalDateTime createdAt;
 }

@@ -13,7 +13,7 @@ public class ProductRequestDTO {
     @NotBlank(message = "Tên sản phẩm không được để trống")
     private String productName;
 
-    @NotBlank(message = "Giá sản phẩm không được để trống")
+    @NotNull(message = "Giá sản phẩm không được để trống")
     @Min(value = 0, message = "Giá sản phẩm phải >= 0")
     private Double price;
 
@@ -26,8 +26,7 @@ public class ProductRequestDTO {
 
     private String image;
 
-    @NotBlank(message = "Trạng thái không được để trống")
-    @Pattern(regexp = "^(ACTIVE|HIDDEN)$", message = "Trạng thái chỉ được phép là ACTIVE hoặc HIDDEN")
+    @NotNull(message = "Trạng thái không được để trống")
     private EnumStatus status;
 
     private String description;
