@@ -64,6 +64,7 @@ CREATE TABLE chat_messages (
                                id INT AUTO_INCREMENT PRIMARY KEY,
                                chat_id INT NOT NULL,
                                sender_id INT NOT NULL,
+                               sender_type ENUM('CUSTOMER', 'ARTISAN') NOT NULL,
                                is_image TINYINT(1) NOT NULL DEFAULT 0, -- 0: text, 1: image
                                message TEXT NOT NULL,
                                sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,

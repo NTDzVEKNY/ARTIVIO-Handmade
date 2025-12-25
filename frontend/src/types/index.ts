@@ -59,3 +59,26 @@ export type Order = {
 	created_at: string;
 	updated_at: string;
 };
+
+export type Chat = {
+    id: number;
+    customer_id: number;
+    artisan_id: number;
+    product_id: number | null;
+    title: string;
+    description: string;
+    budget: number;
+    reference_image: string;
+    status: 'PENDING' | 'NEGOTIATING' | 'ORDER_CREATED' | 'CLOSED';
+    created_at: string;
+};
+
+export type ChatMessage = {
+    id: number;
+    chat_id: number;
+    sender_id: number;
+    sender_type: 'CUSTOMER' | 'ARTISAN';
+    is_image: boolean;
+    content: string;
+    created_at: string;
+};

@@ -78,6 +78,7 @@ public class ChatService {
         ChatMessage message = new ChatMessage();
         message.setChat(chat);
         message.setSender(sender);
+        message.setSenderType(request.getSenderId().equals(chat.getCustomer().getId()) ? ChatMessage.SenderType.CUSTOMER : ChatMessage.SenderType.ARTISAN);
         message.setMessage(request.getContent());
         // sentAt được xử lý bởi @PrePersist trong Entity rồi
 

@@ -234,10 +234,10 @@ export default function ProductDetailPage() {
                                 </div>
                             </div>
 
-                            {/* Custom Order Button */}
+                            {/* Custom Request Button */}
                             <div className="pt-2">
-                                <button
-                                    onClick={() => alert('Đặt làm riêng (mock)')}
+                                <Link
+                                    href={`/custom-request/${productId}`}
                                     className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-orange-600 to-yellow-500 text-white px-6 py-3 rounded-full font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
@@ -248,8 +248,8 @@ export default function ProductDetailPage() {
                                             clipRule="evenodd"
                                         />
                                     </svg>
-                                    <span>Đặt làm riêng</span>
-                                </button>
+                                    <span>Yêu cầu tùy chỉnh</span>
+                                </Link>
                             </div>
 
                             {/* Meta Info */}
