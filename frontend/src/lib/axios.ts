@@ -10,5 +10,5 @@ export const axiosClient = axios.create({
 // Tạo instance riêng cho Auth để attach interceptors
 export const axiosAuth = axios.create({
     baseURL: BASE_URL,
-    headers: { "Content-Type": "application/json" },
+    // headers: { "Content-Type": "application/json" },
 });

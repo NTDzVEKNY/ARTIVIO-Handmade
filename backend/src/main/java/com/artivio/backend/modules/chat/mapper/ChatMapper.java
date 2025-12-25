@@ -1,10 +1,10 @@
 package com.artivio.backend.modules.chat.mapper;
 
 import com.artivio.backend.modules.chat.dto.ChatDataResponse;
-import com.artivio.backend.modules.chat.model.Chat;
-import org.springframework.stereotype.Component;
 import com.artivio.backend.modules.chat.dto.ChatMessageResponse;
+import com.artivio.backend.modules.chat.model.Chat;
 import com.artivio.backend.modules.chat.model.ChatMessage;
+import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,21 +22,18 @@ public class ChatMapper {
                 .budget(chat.getBudget())
                 .referenceImage(chat.getReferenceImage())
                 .createdAt(chat.getCreatedAt())
-                // Map Customer
                 .customer(chat.getCustomer() != null ?
                         new ChatDataResponse.CustomerDTO() {{
                             setId(chat.getCustomer().getId());
                             setName(chat.getCustomer().getUsername());
                             setEmail(chat.getCustomer().getEmail());
                         }} : null)
-                // Map Artisan
                 .artisan(chat.getArtisan() != null ?
                         new ChatDataResponse.ArtisanDTO() {{
                             setId(chat.getArtisan().getId());
                             setName(chat.getArtisan().getUsername());
                             setEmail(chat.getArtisan().getEmail());
                         }} : null)
-                // Map Product
                 .product(chat.getProduct() != null ?
                         new ChatDataResponse.ProductDTO() {{
                             setId(chat.getProduct().getId());
@@ -45,7 +42,6 @@ public class ChatMapper {
                             setPrice(chat.getProduct().getPrice());
                             setImage(chat.getProduct().getImage());
                         }} : null)
-                // Map Messages
                 .messages(toMessageResponseList(chat.getMessages()))
                 .build();
     }
@@ -53,34 +49,23 @@ public class ChatMapper {
     public ChatMessageResponse toMessageResponse(ChatMessage message) {
         if (message == null) return null;
 
-        ChatMessageResponse response = new ChatMessageResponse();
-        response.setId(message.getId());
+        // Using Builder is cleaner and safer than 'new' + setters
+        return ChatMessageResponse.builder()
+                .id(message.getId())
+                .chatId(message.getChat() != null ? message.getChat().getId() : null)
+                .senderId(message.getSender() != null ? message.getSender().getId() : null)
 
-        // Map Chat ID
-        if (message.getChat() != null) {
-            response.setChatId(message.getChat().getId());
-        }
+                // Convert Enum to String to match DTO
+                .senderType(message.getSenderType() != null ? message.getSenderType() : null)
 
-        // Map Sender ID (Giả sử sender là User entity)
-        if (message.getSender() != null) {
-            response.setSenderId(message.getSender().getId());
-        }
+                .message(message.getMessage())
+                .isImage(message.isImage())
 
-        response.setSenderType(message.getSenderType());
-        response.setImage(message.isImage());
-        response.setMessage(message.getMessage());
-
-        // Xử lý Date -> String (Giả sử getCreatedAt trả về LocalDateTime hoặc Date)
-        if (message.getSentAt() != null) {
-            response.setCreatedAt(message.getSentAt().toString());
-            // Hoặc format đẹp hơn:
-            // message.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-        }
-
-        return response;
+                // Fix: Pass LocalDateTime directly, do not use .toString()
+                .createdAt(message.getSentAt())
+                .build();
     }
 
-    // 2. Map List Messages
     public List<ChatMessageResponse> toMessageResponseList(List<ChatMessage> messages) {
         if (messages == null) return List.of();
         return messages.stream()
