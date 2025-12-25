@@ -27,7 +27,7 @@ CREATE TABLE categories (
 -- 3. Products
 CREATE TABLE products (
                           id INT AUTO_INCREMENT PRIMARY KEY,
-                          artisan_id INT NOT NULL DEFAULT 0,
+                          artisan_id INT NOT NULL DEFAULT 1,
                           category_id INT NULL, -- Để NULL để nếu xóa category thì sản phẩm không bị mất (SET NULL)
                           name VARCHAR(255) NOT NULL,
                           description TEXT,
