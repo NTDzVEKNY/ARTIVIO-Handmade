@@ -172,12 +172,15 @@ public class ChatService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String finalContent = content;
+        ChatMessage.EnumMessageType finalType = ChatMessage.EnumMessageType.TEXT;
         boolean finalIsImage = isImage;
+
 
         // Tái sử dụng hàm lưu file
         if (file != null && !file.isEmpty()) {
             finalContent = saveFileToSystem(file);
             finalIsImage = true;
+            finalType = ChatMessage.EnumMessageType.IMAGE;
         }
 
         ChatMessage message = new ChatMessage();
@@ -192,6 +195,7 @@ public class ChatService {
 
         message.setMessage(finalContent);
         message.setImage(finalIsImage);
+        message.setType(finalType);
 
         ChatMessage savedMsg = chatMessageRepository.save(message);
 
@@ -201,6 +205,7 @@ public class ChatService {
                 .senderType(savedMsg.getSenderType())
                 .message(savedMsg.getMessage())
                 .isImage(savedMsg.isImage())
+                .type(savedMsg.getType())
                 .createdAt(savedMsg.getSentAt())
                 .build();
     }

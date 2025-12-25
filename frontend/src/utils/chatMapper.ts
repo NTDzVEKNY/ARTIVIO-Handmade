@@ -40,6 +40,7 @@ export const mapToChatMessage = (raw: RawChatMessage, chatId: number): ChatMessa
         sender_id: raw.senderId,
         sender_type: raw.senderType as ChatMessage['sender_type'], // 'CUSTOMER' | 'ARTISAN'
         is_image: raw.image,
+        type: raw.type as ChatMessage['type'],
         content: raw.message,
         created_at: raw.createdAt,
     };

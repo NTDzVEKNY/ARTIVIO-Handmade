@@ -23,7 +23,7 @@ public class OrderItem {
     private Order order;
 
     @ManyToOne
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id", nullable = true)
     @JsonIgnore
     private Product product;
     private Integer quantity;

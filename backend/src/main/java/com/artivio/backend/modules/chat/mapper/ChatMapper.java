@@ -60,6 +60,7 @@ public class ChatMapper {
 
                 .message(message.getMessage())
                 .isImage(message.isImage())
+                .type(message.getType() != null ? message.getType() : null)
 
                 // Fix: Pass LocalDateTime directly, do not use .toString()
                 .createdAt(message.getSentAt())
