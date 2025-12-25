@@ -81,7 +81,7 @@ export const columns: ColumnDef<any>[] = [
         id: "actions",
         header: "Hành động",
         cell: ({ row }) => (
-            <Link href={`/chat/${row.original.chat.id}`}>
+            <Link href={`/admin/chat/${row.original.chat.id}`}>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                     <ChevronRight className="h-4 w-4" />
                 </Button>
