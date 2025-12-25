@@ -26,7 +26,7 @@ public class Chat {
     private User artisan;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "enum('OPEN','CLOSED')")
+    @Column(columnDefinition = "enum('PENDING', 'NEGOTIATING', 'ORDER_CREATED','CLOSED')")
     private ChatStatus status;
 
     @Column(name = "created_at")
@@ -35,8 +35,8 @@ public class Chat {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.status == null) this.status = ChatStatus.OPEN;
+        if (this.status == null) this.status = ChatStatus.PENDING;
     }
 
-    public enum ChatStatus { OPEN, CLOSED }
+    public enum ChatStatus { PENDING, NEGOTIATING, ORDER_CREATED, CLOSED }
 }

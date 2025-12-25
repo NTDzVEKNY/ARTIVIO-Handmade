@@ -8,7 +8,7 @@ import { RawOrderDetail } from "@/types/apiTypes";
 // --- Main Hook ---
 const useOrderDetails = (orderId: string | number) => {
     const axiosAuth = useAxiosAuth(); // Sử dụng instance axios đã có token
-    const [order, setOrder] = useState<OrderDetail | null>(null);
+    const [order, setOrder] = useState<RawOrderDetail | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 

@@ -25,8 +25,15 @@ public class ChatMessage {
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sender_type", nullable = false)
+    private SenderType senderType;
+
     @Column(columnDefinition = "TEXT")
     private String message;
+
+    @Column(name = "is_image")
+    private boolean isImage;
 
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
@@ -35,4 +42,6 @@ public class ChatMessage {
     protected void onCreate() {
         this.sentAt = LocalDateTime.now();
     }
+
+    public enum SenderType { CUSTOMER, ARTISAN }
 }

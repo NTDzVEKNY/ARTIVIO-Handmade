@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
+import java.util.List;
+
 @Entity
 @Table(name = "chats")
 @Getter
@@ -26,8 +28,27 @@ public class Chat {
     private User artisan;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "enum('OPEN','CLOSED')")
+    @Column(columnDefinition = "enum('PENDING', 'NEGOTIATING', 'ORDER_CREATED','CLOSED')")
     private ChatStatus status;
+
+    @ManyToOne
+    @JoinColumn(name = "product_id", nullable = true)
+    private Product product;
+
+    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ChatMessage> messages;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "title")
+    private String title;
+
+    @Column(name = "budget")
+    private Double budget;
+
+    @Column(name = "reference_image")
+    private String referenceImage;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -35,8 +56,8 @@ public class Chat {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        if (this.status == null) this.status = ChatStatus.OPEN;
+        if (this.status == null) this.status = ChatStatus.PENDING;
     }
 
-    public enum ChatStatus { OPEN, CLOSED }
+    public enum ChatStatus { PENDING, NEGOTIATING, ORDER_CREATED, CLOSED }
 }
