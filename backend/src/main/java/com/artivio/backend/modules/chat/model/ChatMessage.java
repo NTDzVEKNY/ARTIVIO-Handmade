@@ -35,8 +35,13 @@ public class ChatMessage {
     @Column(name = "is_image")
     private boolean isImage;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type")
+    private EnumMessageType type;
+
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
+
 
     @PrePersist
     protected void onCreate() {
@@ -44,4 +49,5 @@ public class ChatMessage {
     }
 
     public enum SenderType { CUSTOMER, ARTISAN }
+    public enum EnumMessageType { TEXT, IMAGE, ORDER_PROPOSAL }
 }
