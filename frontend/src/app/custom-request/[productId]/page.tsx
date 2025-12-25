@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -15,13 +15,38 @@ import { axiosClient } from '@/lib/axios';
 import useAxiosAuth from '@/hooks/useAxiosAuth';
 import { RawProductResponse } from '@/types/apiTypes';
 import { mapToProduct } from '@/utils/ProductMapper';
-import {useSession} from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { Upload, X, ArrowLeft } from 'lucide-react';
 
-interface FormData {
+// --- HÀM HELPER XỬ LÝ ẢNH ---
+// Hàm này xử lý các trường hợp URL ảnh khác nhau
+const getProductImageUrl = (imagePath?: string | null) => {
+    // 1. Nếu không có đường dẫn ảnh, trả về ảnh placeholder mặc định
+    if (!imagePath) return '/placeholder.jpg';
+
+    // 2. Nếu bắt đầu bằng '//' (protocol-relative), thêm 'https:'
+    if (imagePath.startsWith('//')) {
+        return `https:${imagePath}`;
+    }
+
+    // 3. Nếu đã là đường dẫn tuyệt đối (có http hoặc https), giữ nguyên
+    // .startsWith('http') sẽ bắt được cả 'http://' và 'https://'
+    if (imagePath.startsWith('http')) {
+        return imagePath;
+    }
+
+    // 4. Trường hợp còn lại: đường dẫn tương đối từ server của mình
+    // Thêm safety check `|| ''` phòng trường hợp biến môi trường chưa được set
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    return `${apiUrl}${imagePath}`;
+};
+// ---------------------------
+
+
+interface FormValues {
     title: string;
     description: string;
     expected_price: string;
-    reference_images: string[];
 }
 
 interface FormErrors {
@@ -40,16 +65,25 @@ export default function CustomRequestPage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    // Đã xóa các trường không cần thiết khỏi state
-    const [formData, setFormData] = useState<FormData>({
+    const [formValues, setFormValues] = useState<FormValues>({
         title: '',
         description: '',
         expected_price: '',
-        reference_images: [],
     });
 
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
     const [errors, setErrors] = useState<FormErrors>({});
-    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        return () => {
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+            }
+        };
+    }, [previewUrl]);
 
     useEffect(() => {
         if (!productId || Number.isNaN(productId)) {
@@ -63,6 +97,7 @@ export default function CustomRequestPage() {
                 const productData = await axiosClient.get<RawProductResponse>(`/products/${productId}`);
                 const product = mapToProduct(productData.data);
                 setProduct(product);
+                setFormValues(prev => ({ ...prev, title: `Yêu cầu tùy chỉnh: ${product.name}` }));
             } catch (err) {
                 toast.error('Không tải được thông tin sản phẩm');
                 console.error(err);
@@ -74,56 +109,41 @@ export default function CustomRequestPage() {
         fetchProduct();
     }, [productId]);
 
-    const handleInputChange = (field: keyof FormData, value: string) => {
-        setFormData((prev) => ({ ...prev, [field]: value }));
+    const handleInputChange = (field: keyof FormValues, value: string) => {
+        setFormValues((prev) => ({ ...prev, [field]: value }));
         if (errors[field as keyof FormErrors]) {
             setErrors((prev) => ({ ...prev, [field]: undefined }));
         }
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files) return;
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-        const newPreviews: string[] = [];
-        Array.from(files).forEach((file) => {
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const result = reader.result as string;
-                    newPreviews.push(result);
-                    if (newPreviews.length === Array.from(files).length) {
-                        setImagePreviews((prev) => [...prev, ...newPreviews]);
-                        setFormData((prev) => ({
-                            ...prev,
-                            reference_images: [...prev.reference_images, ...newPreviews],
-                        }));
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+        if (file.type.startsWith('image/')) {
+            setSelectedFile(file);
+            const objectUrl = URL.createObjectURL(file);
+            setPreviewUrl(objectUrl);
+        } else {
+            toast.error("Vui lòng chọn file hình ảnh hợp lệ");
+        }
     };
 
-    const removeImage = (index: number) => {
-        setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-        setFormData((prev) => ({
-            ...prev,
-            reference_images: prev.reference_images.filter((_, i) => i !== index),
-        }));
+    const removeImage = () => {
+        setSelectedFile(null);
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+        }
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
-
-        if (!formData.title.trim()) {
-            newErrors.title = 'Vui lòng nhập tiêu đề yêu cầu';
-        }
-
-        if (!formData.description.trim()) {
-            newErrors.description = 'Vui lòng nhập mô tả chi tiết';
-        }
-
+        if (!formValues.title.trim()) newErrors.title = 'Vui lòng nhập tiêu đề yêu cầu';
+        if (!formValues.description.trim()) newErrors.description = 'Vui lòng nhập mô tả chi tiết';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -139,16 +159,26 @@ export default function CustomRequestPage() {
         setSubmitting(true);
 
         try {
-            const response = await axiosAuth.post('/chat/initiate', {
-                artisanId: 1,
-                productId: productId,
-                title: formData.title.trim(),
-                description: formData.description.trim(),
-                budget: formData.expected_price ? Number(formData.expected_price) : undefined,
-                reference_images: formData.reference_images,
-            });
+            const formDataPayload = new FormData();
 
-            console.log(response);
+            // @ts-ignore: Nếu product type của bạn có owner/artisan_id thì dùng
+            const artisanId = product?.owner?.id || 1;
+
+            formDataPayload.append('artisanId', artisanId.toString());
+            formDataPayload.append('productId', productId.toString());
+            formDataPayload.append('title', formValues.title.trim());
+            formDataPayload.append('description', formValues.description.trim());
+
+            if (formValues.expected_price) {
+                formDataPayload.append('budget', formValues.expected_price);
+            }
+
+            if (selectedFile) {
+                formDataPayload.append('reference_image', selectedFile);
+            }
+
+            const response = await axiosAuth.post('/chat/initiate', formDataPayload);
+
             toast.success('Yêu cầu đã được gửi thành công!');
             router.push(`/chat/${response.data.chatId}`);
         } catch (error) {
@@ -195,46 +225,36 @@ export default function CustomRequestPage() {
             <main className="container mx-auto px-6 py-12 max-w-4xl">
                 <Link
                     href={`/shop/id/${productId}`}
-                    className="inline-flex items-center gap-2 text-gray-600 hover:text-[#0f172a] mb-6"
+                    className="inline-flex items-center gap-2 text-gray-600 hover:text-[#0f172a] mb-6 transition-colors"
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            fillRule="evenodd"
-                            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                            clipRule="evenodd"
-                        />
-                    </svg>
+                    <ArrowLeft size={20} />
                     Quay lại sản phẩm
                 </Link>
 
                 <h1 className="text-3xl font-bold mb-8">Yêu cầu sản phẩm tùy chỉnh</h1>
 
                 {/* Product Information Section */}
-                <div className="bg-gray-50 rounded-lg p-6 mb-8">
-                    <h2 className="text-xl font-semibold mb-4">Thông tin sản phẩm</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-100">
+                <div className="bg-gray-50 rounded-lg p-6 mb-8 border border-gray-100">
+                    <h2 className="text-xl font-semibold mb-4">Thông tin sản phẩm gốc</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="relative w-full aspect-[4/3] md:h-40 rounded-lg overflow-hidden bg-white border">
+                            {/* SỬ DỤNG HÀM HELPER Ở ĐÂY */}
                             <Image
-                                src={product.image ? (product.image.startsWith('//') ? `https:${product.image}` : product.image) : product.image || '/hero-handmade.jpg'}
+                                src={getProductImageUrl(product.image)}
                                 alt={product.name}
                                 fill
                                 className="object-cover"
                             />
                         </div>
-                        <div className="space-y-3">
-                            <h3 className="text-lg font-semibold">{product.name}</h3>
-                            <p className="text-gray-600 text-sm">{product.description || 'Không có mô tả'}</p>
+                        <div className="md:col-span-2 space-y-2">
+                            <h3 className="text-lg font-bold text-gray-900">{product.name}</h3>
+                            <p className="text-gray-600 text-sm line-clamp-2">{product.description || 'Không có mô tả'}</p>
                             <p className="text-lg font-bold text-[#0f172a]">
                                 ₫{(product.price || 0).toLocaleString('vi-VN')}
                             </p>
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-                                <p className="text-sm text-blue-800">
-                                    <strong>Lưu ý:</strong> Sản phẩm này có thể được tùy chỉnh theo yêu cầu
+                            <div className="inline-block bg-blue-50 border border-blue-100 rounded-md px-3 py-2 mt-2">
+                                <p className="text-xs text-blue-700 font-medium">
+                                    Sản phẩm này sẽ được dùng làm mẫu để tùy chỉnh theo ý bạn.
                                 </p>
                             </div>
                         </div>
@@ -251,7 +271,7 @@ export default function CustomRequestPage() {
                         <Input
                             id="title"
                             type="text"
-                            value={formData.title}
+                            value={formValues.title}
                             onChange={(e) => handleInputChange('title', e.target.value)}
                             placeholder="Ví dụ: Đặt làm bình gốm màu xanh dương"
                             className="mt-2"
@@ -265,13 +285,16 @@ export default function CustomRequestPage() {
                         <Label htmlFor="description" className="text-base font-semibold">
                             Mô tả chi tiết <span className="text-red-500">*</span>
                         </Label>
+                        <p className="text-xs text-gray-500 mb-2">
+                            Hãy mô tả những thay đổi bạn muốn so với sản phẩm gốc (màu sắc, kích thước, v.v.)
+                        </p>
                         <textarea
                             id="description"
-                            value={formData.description}
+                            value={formValues.description}
                             onChange={(e) => handleInputChange('description', e.target.value)}
-                            placeholder="Mô tả chi tiết về sản phẩm bạn muốn đặt làm..."
+                            placeholder="Tôi muốn giữ kiểu dáng này nhưng thay đổi màu men sang..."
                             rows={5}
-                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-2 resize-none"
                             disabled={submitting}
                         />
                         {errors.description && (
@@ -279,13 +302,13 @@ export default function CustomRequestPage() {
                         )}
                     </div>
 
-                    {/* Expected Price (Đã bỏ Grid và Deadline) */}
+                    {/* Expected Price */}
                     <div>
                         <Label htmlFor="expected_price">Giá mong muốn (₫)</Label>
                         <Input
                             id="expected_price"
                             type="number"
-                            value={formData.expected_price}
+                            value={formValues.expected_price}
                             onChange={(e) => handleInputChange('expected_price', e.target.value)}
                             placeholder="Ví dụ: 500000"
                             className="mt-2"
@@ -294,91 +317,69 @@ export default function CustomRequestPage() {
                         />
                     </div>
 
-                    {/* Reference Images */}
+                    {/* Reference Images - Single Upload */}
                     <div>
-                        <Label htmlFor="reference_images">Hình ảnh tham khảo</Label>
-                        <Input
-                            id="reference_images"
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleImageUpload}
-                            className="mt-2"
-                            disabled={submitting}
-                        />
-                        <p className="text-sm text-gray-500 mt-1">
-                            Có thể tải lên nhiều hình ảnh (chỉ xem trước, chưa lưu vào server)
-                        </p>
-                        {imagePreviews.length > 0 && (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                                {imagePreviews.map((preview, index) => (
-                                    <div key={index} className="relative group">
-                                        <div className="relative w-full h-32 rounded-lg overflow-hidden bg-gray-100">
-                                            <Image src={preview} alt={`Preview ${index + 1}`} fill className="object-cover" />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => removeImage(index)}
-                                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            disabled={submitting}
-                                        >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-4 w-4"
-                                                viewBox="0 0 20 20"
-                                                fill="currentColor"
-                                            >
-                                                <path
-                                                    fillRule="evenodd"
-                                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                                    clipRule="evenodd"
-                                                />
-                                            </svg>
-                                        </button>
+                        <Label className="block mb-2">Hình ảnh tham khảo bổ sung (Tối đa 1 ảnh)</Label>
+
+                        <div className="flex justify-start">
+                            {previewUrl ? (
+                                <div className="relative group w-40 aspect-square rounded-lg overflow-hidden bg-gray-100 border shadow-sm">
+                                    <Image
+                                        src={previewUrl}
+                                        alt="Reference Preview"
+                                        fill
+                                        className="object-cover"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeImage}
+                                        className="absolute top-1 right-1 bg-white/90 hover:bg-white text-red-500 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                                        disabled={submitting}
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <label className="flex flex-col items-center justify-center w-40 aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                        <p className="text-xs text-gray-500 font-semibold text-center px-2">
+                                            Tải ảnh lên
+                                        </p>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                    <Input
+                                        ref={fileInputRef}
+                                        id="reference_image"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        className="hidden"
+                                        disabled={submitting}
+                                    />
+                                </label>
+                            )}
+                        </div>
                     </div>
 
                     {/* Submit Button */}
-                    <div className="flex gap-4 pt-4">
+                    <div className="flex gap-4 pt-4 border-t">
                         <Button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 bg-[#0f172a] text-white hover:bg-gray-800"
+                            className="flex-1 bg-[#0f172a] text-white hover:bg-gray-800 py-6 text-lg font-medium"
                         >
                             {submitting ? (
                                 <span className="flex items-center gap-2">
-                                  <svg
-                                      className="animate-spin h-5 w-5"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                  >
-                                    <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                    />
-                                    <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    />
-                                  </svg>
-                                  Đang gửi...
+                                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                                    Đang gửi yêu cầu...
                                 </span>
                             ) : (
-                                'Gửi yêu cầu'
+                                'Gửi yêu cầu tùy chỉnh'
                             )}
                         </Button>
                         <Link href={`/shop/id/${productId}`}>
-                            <Button type="button" variant="outline" disabled={submitting}>
-                                Hủy
+                            <Button type="button" variant="outline" disabled={submitting} className="py-6 text-lg">
+                                Hủy bỏ
                             </Button>
                         </Link>
                     </div>
