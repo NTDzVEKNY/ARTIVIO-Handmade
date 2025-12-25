@@ -8,6 +8,16 @@ const nextConfig = {
                 port: '8080',
                 pathname: '/uploads/**',
             },
+            {
+                protocol: 'https',
+                hostname: 'bizweb.dktcdn.net',
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'nanghandmade.com',
+                pathname: '/**',
+            },
         ],
     },
 };

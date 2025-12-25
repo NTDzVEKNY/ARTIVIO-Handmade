@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -197,5 +198,14 @@ public class ChatService {
                 .isImage(savedMsg.isImage()) // Entity cần có getter này
                 .createdAt(savedMsg.getSentAt()) // hoặc getCreatedAt() tuỳ entity của bạn
                 .build();
+    }
+
+    public List<ChatDataResponse> getMyChats(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Chat> chats = chatRepository.findByCustomerOrderByCreatedAtDesc(user);
+
+        return chats.stream().map(chatMapper::toResponse).collect(Collectors.toList());
     }
 }

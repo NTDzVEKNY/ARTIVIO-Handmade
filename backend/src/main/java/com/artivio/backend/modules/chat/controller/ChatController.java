@@ -80,4 +80,11 @@ public class ChatController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @GetMapping("/my-chats")
+    public ResponseEntity<List<ChatDataResponse>> getMyChats(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(chatService.getMyChats(userDetails.getUsername()));
+    }
 }
