@@ -20,11 +20,11 @@ const NewProductPage = () => {
 
     // State quản lý dữ liệu form
     const [formData, setFormData] = useState({
-        name: '',
+        productName: '',
         price: '',
         description: '',
-        category_id: '',
-        stock_quantity: '',
+        categoryId: '',
+        stockQuantity: '',
         image: '',
         status: 'ACTIVE',
     });
@@ -61,12 +61,12 @@ const NewProductPage = () => {
         setLoading(true);
 
         // --- VALIDATION ---
-        if (!formData.name.trim()) {
+        if (!formData.productName.trim()) {
             toast.error('Vui lòng nhập tên sản phẩm');
             setLoading(false);
             return;
         }
-        if (!formData.category_id) {
+        if (!formData.categoryId) {
             toast.error('Vui lòng chọn danh mục sản phẩm');
             setLoading(false);
             return;
@@ -76,19 +76,18 @@ const NewProductPage = () => {
             setLoading(false);
             return;
         }
-        if (!formData.stock_quantity || Number(formData.stock_quantity) < 0) {
+        if (!formData.stockQuantity || Number(formData.stockQuantity) < 0) {
             toast.error('Số lượng tồn kho không hợp lệ (phải >= 0)');
             setLoading(false);
             return;
         }
 
         try {
-            // Chuyển đổi giá và số lượng sang kiểu số trước khi gửi
             const payload = {
                 ...formData,
-                category_id: Number(formData.category_id),
                 price: Number(formData.price) || 0,
-                stock_quantity: Number(formData.stock_quantity) || 0,
+                stockQuantity: Number(formData.stockQuantity) || 0,
+                categoryId: Number(formData.categoryId),
             };
 
             // 3. Post sản phẩm dùng axiosAuth
@@ -97,6 +96,10 @@ const NewProductPage = () => {
 
             toast.success('Tạo sản phẩm mới thành công!');
             router.push('/admin/products');
+            // router.refresh() được dùng để yêu cầu Next.js làm mới lại dữ liệu ở route hiện tại.
+            // Khi được gọi sau router.push(), nó sẽ đảm bảo rằng khi trang danh sách sản phẩm
+            // được tải, nó sẽ lấy dữ liệu mới nhất từ server thay vì từ cache.
+            router.refresh();
         } catch (error: any) {
             console.error('Create product error:', error);
             // Xử lý thông báo lỗi chi tiết hơn nếu server trả về message
@@ -159,8 +162,8 @@ const NewProductPage = () => {
                             <div>
                                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#3F2E23' }}>Tên sản phẩm</label>
                                 <input
-                                    name="name"
-                                    value={formData.name}
+                                    name="productName"
+                                    value={formData.productName}
                                     onChange={handleChange}
                                     placeholder="Ví dụ: Túi tote vải canvas..."
                                     className="w-full px-3 py-2 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#3F2E23]/20 transition-all"
@@ -171,8 +174,8 @@ const NewProductPage = () => {
                             <div>
                                 <label className="block text-sm font-medium mb-1.5" style={{ color: '#3F2E23' }}>Danh mục</label>
                                 <select
-                                    name="category_id"
-                                    value={formData.category_id}
+                                    name="categoryId"
+                                    value={formData.categoryId}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#3F2E23]/20 transition-all"
                                     style={{ borderColor: '#E8D5B5', color: '#3F2E23' }}
@@ -216,9 +219,9 @@ const NewProductPage = () => {
                                 <div>
                                     <label className="block text-sm font-medium mb-1.5" style={{ color: '#3F2E23' }}>Số lượng tồn kho</label>
                                     <input
-                                        name="stock_quantity"
+                                        name="stockQuantity"
                                         type="number"
-                                        value={formData.stock_quantity}
+                                        value={formData.stockQuantity}
                                         onChange={handleChange}
                                         placeholder="0"
                                         className="w-full px-3 py-2 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-[#3F2E23]/20 transition-all"

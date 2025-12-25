@@ -2,75 +2,111 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Product, Category } from '@/types';
-// import { fetchApi } from '@/services/api'; // Bỏ dòng này
-import useAxiosAuth from '@/hooks/useAxiosAuth'; // Thêm hook này
+import useAxiosAuth from '@/hooks/useAxiosAuth';
 import Image from 'next/image';
 import toast, { Toast } from 'react-hot-toast';
 import { ArrowLeft, Trash, Save, XCircle, AlertTriangle, Image as ImageIcon } from 'lucide-react';
-import { RawProductResponse } from '@/types/apiTypes';
-import { mapToProduct } from '@/utils/ProductMapper';
 
-const ProductDetailPage = () => {
+interface Category {
+    id: number;
+    name: string;
+}
+
+interface ProductFormData {
+    id?: number;
+    productName: string;
+    description: string | null;
+    price: number;
+    image: string;
+    categoryId: number | undefined;
+    stockQuantity: number;
+    quantitySold: number;
+    status: 'ACTIVE' | 'HIDDEN';
+}
+
+const ProductFormPage = () => {
     const router = useRouter();
     const params = useParams();
     const { id } = params;
-    const axiosAuth = useAxiosAuth(); // Khởi tạo axios instance
-
-    const [product, setProduct] = useState<Product | null>(null);
-    const [formData, setFormData] = useState<Product | null>(null);
+    const axiosAuth = useAxiosAuth();
+    const isNew = id === 'new';
+    const [originalProduct, setOriginalProduct] = useState<Partial<ProductFormData> | null>(null);
+    const [formData, setFormData] = useState<Partial<ProductFormData> | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [isDirty, setIsDirty] = useState(false);
-    const [isUpdating, setIsUpdating] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loading, setLoading] = useState(!isNew);
     const productNameRef = useRef<HTMLTextAreaElement>(null);
     const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
-        if (id) {
-            const getProduct = async () => {
-                try {
-                    setLoading(true);
-                    // Lấy dữ liệu sản phẩm và danh mục song song để tối ưu
-                    // Axios trả về response object, dữ liệu nằm trong .data
-                    const [productRes, categoriesRes] = await Promise.all([
-                        axiosAuth.get<RawProductResponse>(`/products/${id}?admin=true`),
-                        axiosAuth.get<Category[]>(`/category`)
-                    ]);
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const categoriesRes = await axiosAuth.get<any[]>(`/category`);
+                const mappedCategories = (categoriesRes.data || []).map((cat: any) => ({
+                    id: cat.categoryId,
+                    name: cat.categoryName,
+                }));
+                setCategories(mappedCategories);
 
+                if (!isNew) {
+                    const productRes = await axiosAuth.get<any>(`/products/${id}?admin=true`);
                     const productData = productRes.data;
-                    const categoriesData = categoriesRes.data;
+                    const product: Partial<ProductFormData> = productData ? {
+                        id: productData.id,
+                        productName: productData.name,
+                        description: productData.description,
+                        price: productData.price,
+                        image: productData.image,
+                        categoryId: productData.categoryId,
+                        stockQuantity: productData.stockQuantity,
+                        quantitySold: productData.quantitySold,
+                        status: productData.status,
+                    } : null;
 
-                    // Map RawProductResponse to Product type
-                    const mappedProduct = productData ? mapToProduct(productData) : null;
-                    setProduct(mappedProduct);
-                    setFormData(mappedProduct);
-                    setCategories(categoriesData || []);
-                } catch (error) {
-                    console.error("Failed to fetch product and categories", error);
-                    toast.error("Không thể tải dữ liệu sản phẩm");
-                } finally {
-                    setLoading(false);
+                    setOriginalProduct(product);
+                    setFormData(product);
+                } else {
+                    // Initialize form for a new product
+                    const newProd: Partial<ProductFormData> = {
+                        productName: '',
+                        price: 0,
+                        stockQuantity: 0,
+                        quantitySold: 0,
+                        image: '',
+                        status: 'ACTIVE',
+                        description: '',
+                        categoryId: mappedCategories?.[0]?.id || undefined,
+                    };
+                    setOriginalProduct(newProd as ProductFormData);
+                    setFormData(newProd);
                 }
-            };
-            getProduct();
-        }
-    }, [id, axiosAuth]); // Thêm axiosAuth vào dependency array
+            } catch (error) {
+                console.error("Failed to fetch data", error);
+                toast.error(isNew ? "Không thể tải danh mục" : "Không thể tải dữ liệu sản phẩm");
+                if (!isNew) router.push('/admin/products');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [id, isNew, axiosAuth, router]);
 
-    // Check for changes between original product and form data
     useEffect(() => {
-        if (product && formData) {
-            const hasChanged = JSON.stringify(product) !== JSON.stringify(formData);
+        if (isNew) {
+            setIsDirty(true); // For new products, the form is always "dirty"
+        } else if (originalProduct && formData) {
+            const hasChanged = JSON.stringify(originalProduct) !== JSON.stringify(formData);
             setIsDirty(hasChanged);
         } else {
             setIsDirty(false);
         }
-    }, [formData, product]);
+    }, [formData, originalProduct, isNew]);
 
-    // Prompt user before leaving page with unsaved changes
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isDirty) {
+            if (isDirty && !isNew) {
                 e.preventDefault();
                 e.returnValue = 'Bạn có các thay đổi chưa được lưu. Bạn có chắc muốn rời đi?';
             }
@@ -79,9 +115,8 @@ const ProductDetailPage = () => {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [isDirty]);
+    }, [isDirty, isNew]);
 
-    // Auto-resize textareas to fit content
     useEffect(() => {
         if (productNameRef.current) {
             productNameRef.current.style.height = 'auto';
@@ -97,11 +132,104 @@ const ProductDetailPage = () => {
         const { name, value } = e.target;
         setFormData(prev => {
             if (!prev) return null;
-            const newValue = ['price', 'stock_quantity', 'category_id'].includes(name) ? Number(value) : value;
+            const newValue = ['price', 'stockQuantity', 'categoryId'].includes(name) ? Number(value) : value;
             return { ...prev, [name]: newValue };
         });
     };
+    
+    const validateAndPreparePayload = () => {
+        if (!formData) return null;
 
+        if (!formData.productName?.trim()) {
+            toast.error('Tên sản phẩm không được để trống');
+            return null;
+        }
+        if (!formData.categoryId) {
+            toast.error('Vui lòng chọn danh mục');
+            return null;
+        }
+        if (formData.price === undefined || formData.price < 0) {
+            toast.error('Giá sản phẩm không được âm');
+            return null;
+        }
+        if (formData.stockQuantity === undefined || formData.stockQuantity < 0 || !Number.isInteger(formData.stockQuantity)) {
+            toast.error('Số lượng tồn kho phải là số nguyên không âm');
+            return null;
+        }
+
+        const payload = {
+            productName: formData.productName,
+            price: Number(formData.price) || 0,
+            stockQuantity: Number(formData.stockQuantity) || 0,
+            image: formData.image || '',
+            status: formData.status || 'ACTIVE',
+            description: formData.description || '',
+            categoryId: Number(formData.categoryId),
+        };
+
+        return payload;
+    };
+
+
+    const handleSubmit = async () => {
+        const productPayload = validateAndPreparePayload();
+        if (!productPayload) return;
+
+        setIsSubmitting(true);
+        const toastId = toast.loading(isNew ? 'Đang tạo sản phẩm...' : 'Đang cập nhật...');
+
+        try {
+            let response;
+            if (isNew) {
+                // CREATE
+                response = await axiosAuth.post('/products', productPayload);
+                toast.success('Tạo sản phẩm thành công!', { id: toastId });
+                router.push('/admin/products');
+                router.refresh();
+            } else {
+                // UPDATE
+                response = await axiosAuth.put(`/products/${id}`, productPayload);
+                const updatedProductData = response.data;
+                const updatedProduct: Partial<ProductFormData> = updatedProductData ? {
+                    id: updatedProductData.id,
+                    productName: updatedProductData.name,
+                    description: updatedProductData.description,
+                    price: updatedProductData.price,
+                    image: updatedProductData.image,
+                    categoryId: updatedProductData.categoryId,
+                    stockQuantity: updatedProductData.stockQuantity,
+                    quantitySold: updatedProductData.quantitySold,
+                    status: updatedProductData.status,
+                } : null;
+                setOriginalProduct(updatedProduct as ProductFormData);
+                setFormData(updatedProduct as ProductFormData);
+                toast.success('Cập nhật thành công!', { id: toastId });
+            }
+        } catch (error: any) {
+            console.error(`Failed to ${isNew ? 'create' : 'update'} product`, error);
+            const errorMsg = error.response?.data?.message || (isNew ? 'Tạo sản phẩm thất bại.' : 'Cập nhật thất bại.');
+            toast.error(errorMsg, { id: toastId });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (isNew || !formData?.id) return;
+        confirmDeleteAction(formData.productName!, async () => {
+            try {
+                await axiosAuth.delete(`/products/${formData.id}`);
+                toast.success('Xóa sản phẩm thành công.');
+                router.push('/admin/products');
+                router.refresh();
+            } catch (error) {
+                console.error("Failed to delete product", error);
+                toast.error('Xóa sản phẩm thất bại.');
+            }
+        });
+    };
+    
+    // Confirmation Dialogs remain the same
     const confirmAction = (message: React.ReactNode, onConfirm: () => void) => {
         toast(
             (t: Toast) => (
@@ -166,83 +294,14 @@ const ProductDetailPage = () => {
         );
     };
 
-    const handleUpdate = async () => {
-        if (!formData || !isDirty) return;
-
-        // --- VALIDATION ---
-        if (!formData.name.trim()) {
-            toast.error('Tên sản phẩm không được để trống');
-            return;
-        }
-        if (!formData.category_id) {
-            toast.error('Vui lòng chọn danh mục');
-            return;
-        }
-        if (formData.price < 0) {
-            toast.error('Giá sản phẩm không được âm');
-            return;
-        }
-        if (formData.stock_quantity < 0) {
-            toast.error('Số lượng tồn kho không được âm');
-            return;
-        }
-        if (!Number.isInteger(formData.stock_quantity)) {
-            toast.error('Số lượng tồn kho phải là số nguyên');
-            return;
-        }
-        if (!formData.image?.trim()) {
-            toast.error('Vui lòng nhập đường dẫn hình ảnh');
-            return;
-        }
-        try {
-            new URL(formData.image);
-        } catch {
-            toast.error('Đường dẫn hình ảnh không hợp lệ (phải bắt đầu bằng http/https)');
-            return;
-        }
-
-        setIsUpdating(true);
-        try {
-            // Sử dụng axiosAuth.patch thay vì fetchApi
-            const res = await axiosAuth.patch<Product>(`/products/${formData.id}`, formData);
-            const updatedProduct = res.data; // Lấy data từ response
-
-            setProduct(updatedProduct); // Update original state
-            setFormData(updatedProduct); // Sync form state
-            toast.success('Cập nhật thành công!');
-        } catch (error) {
-            console.error(`Failed to update product`, error);
-            toast.error('Cập nhật thất bại.');
-        } finally {
-            setIsUpdating(false);
-        }
-    };
-
-    const handleDelete = async () => {
-        if (!product) return;
-        confirmDeleteAction(product.name, async () => {
-            try {
-                // Sử dụng axiosAuth.delete thay vì fetchApi
-                await axiosAuth.delete(`/products/${product.id}`);
-
-                toast.success('Xóa sản phẩm thành công.');
-                router.push('/admin/products');
-                router.refresh();
-            } catch (error) {
-                console.error("Failed to delete product", error);
-                toast.error('Xóa sản phẩm thất bại.');
-            }
-        });
-    };
-
     const handleCancel = () => {
-        setFormData(product); // Revert changes
+        setFormData(originalProduct); // Revert changes
     };
 
     const handleBackNavigation = () => {
-        if (isDirty) {
+        if (isDirty && !isNew) {
             confirmAction(
-                <span>Các thay đổi cho sản phẩm <strong className="font-semibold">&quot;{formData?.name}&quot;</strong> sẽ không được lưu. Bạn có chắc chắn muốn quay lại?</span>,
+                <span>Các thay đổi cho sản phẩm <strong className="font-semibold">&quot;{formData?.productName}&quot;</strong> sẽ không được lưu. Bạn có chắc chắn muốn quay lại?</span>,
                 () => {
                     router.push('/admin/products');
                 }
@@ -253,25 +312,23 @@ const ProductDetailPage = () => {
     };
 
     if (loading) {
-        return <div className="text-center py-10">Đang tải chi tiết sản phẩm...</div>;
+        return <div className="text-center py-10">Đang tải...</div>;
     }
 
-    if (!product || !formData) {
-        return <div className="text-center py-10 text-red-500">Không tìm thấy sản phẩm.</div>;
+    if (!formData) {
+        return <div className="text-center py-10 text-red-500">Không thể tải dữ liệu.</div>;
     }
 
     return (
         <div className="space-y-8">
-            {/* Product Details Card */}
-            <div className="rounded-xl shadow-sm p-6 sm:p-8" style={{ backgroundColor: '#FDFBF7', border: '1px solid #E8D5B5' }}>
+             <div className="rounded-xl shadow-sm p-6 sm:p-8" style={{ backgroundColor: '#FDFBF7', border: '1px solid #E8D5B5' }}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Image */}
                     <div className="md:col-span-1 flex flex-col">
                         <div className="relative w-full h-80 rounded-lg overflow-hidden shadow-inner bg-[#F7F1E8] flex items-center justify-center border border-[#E8D5B5]">
                             {formData.image ? (
                                 <Image
                                     src={formData.image.startsWith('//') ? `https:${formData.image}` : formData.image}
-                                    alt={formData.name}
+                                    alt={formData.productName || 'Product Image'}
                                     fill
                                     className="object-cover"
                                 />
@@ -295,32 +352,32 @@ const ProductDetailPage = () => {
                         </div>
                     </div>
 
-                    {/* Info */}
                     <div className="md:col-span-2 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 items-start">
                             <div className="md:col-span-2">
                                 <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Tên sản phẩm</div>
                                 <textarea
                                     ref={productNameRef}
-                                    name="name"
-                                    value={formData.name}
+                                    name="productName"
+                                    value={formData.productName || ''}
                                     onChange={handleFormChange}
                                     className="w-full text-2xl font-bold bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none resize-none overflow-hidden"
                                     style={{ color: '#3F2E23' }}
+                                    placeholder="Nhập tên sản phẩm"
                                 />
                             </div>
 
                             <div>
                                 <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Danh mục</div>
                                 <select
-                                    name="category_id"
-                                    value={formData.category_id || ''}
+                                    name="categoryId"
+                                    value={formData.categoryId || ''}
                                     onChange={handleFormChange}
                                     className="w-full font-semibold bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none pb-2 text-lg"
                                     style={{ color: '#3F2E23' }}
                                 >
-                                    {categories.map((category, index) => (
-                                        <option key={`${category.id}-${index}`} value={category.id}>
+                                    {categories.map((category) => (
+                                        <option key={category.id} value={category.id}>
                                             {category.name}
                                         </option>
                                     ))}
@@ -337,6 +394,7 @@ const ProductDetailPage = () => {
                                 onChange={handleFormChange}
                                 className="w-full text-lg bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none resize-none overflow-hidden"
                                 style={{ color: '#6B4F3E' }}
+                                placeholder="Mô tả chi tiết sản phẩm"
                             />
                         </div>
 
@@ -346,7 +404,7 @@ const ProductDetailPage = () => {
                                 <input
                                     type="number"
                                     name="price"
-                                    value={formData.price}
+                                    value={formData.price || 0}
                                     onChange={handleFormChange}
                                     className="w-full text-2xl font-semibold bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none"
                                     style={{ color: '#D96C39' }}
@@ -356,36 +414,37 @@ const ProductDetailPage = () => {
                                 <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Trạng thái</div>
                                 <select
                                     name="status"
-                                    value={formData.status}
+                                    value={formData.status || 'ACTIVE'}
                                     onChange={handleFormChange}
                                     className="w-full font-semibold bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none"
                                     style={{color: formData.status === 'ACTIVE' ? '#28a745' : '#6c757d'}}
                                 >
                                     <option value="ACTIVE">Đang hoạt động</option>
-                                    <option value="INACTIVE">Bị ẩn</option>
+                                    <option value="HIDDEN">Bị ẩn</option>
                                 </select>
                             </div>
                             <div>
                                 <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Số lượng tồn kho</div>
                                 <input
                                     type="number"
-                                    name="stock_quantity"
-                                    value={formData.stock_quantity}
+                                    name="stockQuantity"
+                                    value={formData.stockQuantity || 0}
                                     onChange={handleFormChange}
                                     className="w-full font-semibold bg-transparent border-b-2 border-transparent focus:border-yellow-500 focus:outline-none"
                                     style={{ color: '#3F2E23' }}
                                 />
                             </div>
-                            <div>
-                                <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Đã bán</div>
-                                <div className="font-semibold" style={{color: '#3F2E23'}}>{formData.quantity_sold || 0}</div>
-                            </div>
+                           {!isNew && (
+                             <div>
+                                 <div className="text-sm font-medium" style={{color: '#6B4F3E'}}>Đã bán</div>
+                                 <div className="font-semibold" style={{color: '#3F2E23'}}>{formData.quantitySold || 0}</div>
+                             </div>
+                           )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Header with back button and actions */}
             <div className="flex items-center justify-end space-x-4">
                 <button
                     onClick={handleBackNavigation}
@@ -395,10 +454,10 @@ const ProductDetailPage = () => {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Quay lại danh sách
                 </button>
-                {isDirty && (
+                {isDirty && !isNew && (
                     <button
                         onClick={handleCancel}
-                        disabled={isUpdating}
+                        disabled={isSubmitting}
                         className="flex items-center px-6 py-3 text-sm font-medium rounded-full shadow-md text-gray-700 bg-gray-200 transition-all transform hover:scale-105 disabled:opacity-50"
                     >
                         <XCircle className="mr-2 h-4 w-4" />
@@ -406,25 +465,28 @@ const ProductDetailPage = () => {
                     </button>
                 )}
                 <button
-                    onClick={handleUpdate}
-                    disabled={!isDirty || isUpdating}
+                    onClick={handleSubmit}
+                    disabled={!isDirty || isSubmitting}
                     className="flex items-center px-6 py-3 text-sm font-medium rounded-full shadow-md text-white transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: '#D96C39' }}
                 >
                     <Save className="mr-2 h-4 w-4" />
-                    {isUpdating ? 'Đang cập nhật...' : 'Cập nhật'}
+                    {isSubmitting ? (isNew ? 'Đang tạo...' : 'Đang cập nhật...') : (isNew ? 'Tạo mới' : 'Cập nhật')}
                 </button>
-                <button
-                    onClick={handleDelete}
-                    className="flex items-center px-6 py-3 text-sm font-medium rounded-full shadow-md text-white transition-all transform hover:scale-105"
-                    style={{ backgroundColor: '#dc3545' }}
-                >
-                    <Trash className="mr-2 h-4 w-4" />
-                    Xóa
-                </button>
+                {!isNew && (
+                    <button
+                        onClick={handleDelete}
+                        disabled={isSubmitting}
+                        className="flex items-center px-6 py-3 text-sm font-medium rounded-full shadow-md text-white transition-all transform hover:scale-105 disabled:opacity-50"
+                        style={{ backgroundColor: '#dc3545' }}
+                    >
+                        <Trash className="mr-2 h-4 w-4" />
+                        Xóa
+                    </button>
+                )}
             </div>
         </div>
     );
 };
 
-export default ProductDetailPage;
+export default ProductFormPage;
