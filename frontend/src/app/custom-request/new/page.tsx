@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -11,13 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useAxiosAuth from '@/hooks/useAxiosAuth';
-import { ArrowLeft, Upload, X } from 'lucide-react'; // Thêm icon cho đẹp
+import { ArrowLeft, Upload, X } from 'lucide-react';
 
-interface FormData {
+interface FormValues {
     title: string;
     description: string;
     expected_price: string;
-    reference_images: string[];
 }
 
 interface FormErrors {
@@ -30,59 +29,69 @@ export default function NewCustomRequestPage() {
     const router = useRouter();
 
     const [submitting, setSubmitting] = useState(false);
-    const [formData, setFormData] = useState<FormData>({
+
+    // Lưu trữ các giá trị text
+    const [formValues, setFormValues] = useState<FormValues>({
         title: '',
         description: '',
         expected_price: '',
-        reference_images: [],
     });
 
-    const [errors, setErrors] = useState<FormErrors>({});
-    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    // State riêng để lưu file thực tế (để gửi lên server)
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    // State để lưu URL preview ảnh (để hiển thị UI)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-    const handleInputChange = (field: keyof FormData, value: string) => {
-        setFormData((prev) => ({ ...prev, [field]: value }));
+    const [errors, setErrors] = useState<FormErrors>({});
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Cleanup URL preview khi component unmount để tránh leak memory
+    useEffect(() => {
+        return () => {
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+            }
+        };
+    }, [previewUrl]);
+
+    const handleInputChange = (field: keyof FormValues, value: string) => {
+        setFormValues((prev) => ({ ...prev, [field]: value }));
         if (errors[field as keyof FormErrors]) {
             setErrors((prev) => ({ ...prev, [field]: undefined }));
         }
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files) return;
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-        const newPreviews: string[] = [];
-        Array.from(files).forEach((file) => {
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const result = reader.result as string;
-                    newPreviews.push(result);
-                    if (newPreviews.length === Array.from(files).length) {
-                        setImagePreviews((prev) => [...prev, ...newPreviews]);
-                        setFormData((prev) => ({
-                            ...prev,
-                            reference_images: [...prev.reference_images, ...newPreviews],
-                        }));
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+        if (file.type.startsWith('image/')) {
+            // 1. Lưu file gốc để gửi đi
+            setSelectedFile(file);
+
+            // 2. Tạo URL preview cho UI
+            const objectUrl = URL.createObjectURL(file);
+            setPreviewUrl(objectUrl);
+        } else {
+            toast.error("Vui lòng chọn file hình ảnh hợp lệ");
+        }
     };
 
-    const removeImage = (index: number) => {
-        setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-        setFormData((prev) => ({
-            ...prev,
-            reference_images: prev.reference_images.filter((_, i) => i !== index),
-        }));
+    const removeImage = () => {
+        setSelectedFile(null);
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+        }
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
-        if (!formData.title.trim()) newErrors.title = 'Vui lòng nhập tiêu đề yêu cầu';
-        if (!formData.description.trim()) newErrors.description = 'Vui lòng nhập mô tả ý tưởng';
+        if (!formValues.title.trim()) newErrors.title = 'Vui lòng nhập tiêu đề yêu cầu';
+        if (!formValues.description.trim()) newErrors.description = 'Vui lòng nhập mô tả ý tưởng';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -98,14 +107,28 @@ export default function NewCustomRequestPage() {
         setSubmitting(true);
 
         try {
-            const response = await axiosAuth.post('/chat/initiate', {
-                artisanId: 1, // LƯU Ý: Nếu không theo sản phẩm, bạn cần logic để chọn Artisan hoặc gán mặc định
-                productId: null, // Gửi null vì đây là yêu cầu mới hoàn toàn
-                title: formData.title.trim(),
-                description: formData.description.trim(),
-                budget: formData.expected_price ? Number(formData.expected_price) : undefined,
-                reference_images: formData.reference_images,
-            });
+            // --- CHUYỂN ĐỔI SANG FORMDATA (MULTIPART) ---
+            const formDataPayload = new FormData();
+
+            // Các trường text
+            formDataPayload.append('artisanId', '1'); // ID artisan mặc định hoặc logic chọn
+            // formDataPayload.append('productId', ''); // Nếu null thì có thể không append hoặc gửi chuỗi rỗng tùy backend
+            formDataPayload.append('title', formValues.title.trim());
+            formDataPayload.append('description', formValues.description.trim());
+
+            if (formValues.expected_price) {
+                formDataPayload.append('budget', formValues.expected_price);
+            }
+
+            // File ảnh (QUAN TRỌNG)
+            if (selectedFile) {
+                // 'reference_image' phải trùng với tên tham số @RequestParam trong Controller Java
+                // Ví dụ: public ResponseEntity<?> initiateChat(@RequestParam("reference_image") MultipartFile file, ...)
+                formDataPayload.append('reference_image', selectedFile);
+            }
+
+            // Axios sẽ tự động set Header 'Content-Type': 'multipart/form-data' khi nhận thấy data là FormData
+            const response = await axiosAuth.post('/chat/initiate', formDataPayload);
 
             toast.success('Gửi yêu cầu thành công!');
             router.push(`/chat/${response.data.chatId}`);
@@ -137,7 +160,6 @@ export default function NewCustomRequestPage() {
                     </p>
                 </div>
 
-                {/* Custom Request Form */}
                 <div className="bg-white border rounded-xl p-6 md:p-8 shadow-sm">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Title */}
@@ -148,7 +170,7 @@ export default function NewCustomRequestPage() {
                             <Input
                                 id="title"
                                 type="text"
-                                value={formData.title}
+                                value={formValues.title}
                                 onChange={(e) => handleInputChange('title', e.target.value)}
                                 placeholder="Ví dụ: Bộ ấm trà gốm men hỏa biến..."
                                 className="mt-2"
@@ -167,7 +189,7 @@ export default function NewCustomRequestPage() {
                             </p>
                             <textarea
                                 id="description"
-                                value={formData.description}
+                                value={formValues.description}
                                 onChange={(e) => handleInputChange('description', e.target.value)}
                                 placeholder="Tôi muốn đặt làm một bộ ấm trà..."
                                 rows={6}
@@ -185,7 +207,7 @@ export default function NewCustomRequestPage() {
                             <Input
                                 id="expected_price"
                                 type="number"
-                                value={formData.expected_price}
+                                value={formValues.expected_price}
                                 onChange={(e) => handleInputChange('expected_price', e.target.value)}
                                 placeholder="Ví dụ: 1000000"
                                 className="mt-2"
@@ -194,41 +216,47 @@ export default function NewCustomRequestPage() {
                             />
                         </div>
 
-                        {/* Reference Images */}
+                        {/* Reference Image - Single Upload */}
                         <div>
-                            <Label className="block mb-2">Hình ảnh tham khảo (Nếu có)</Label>
+                            <Label className="block mb-2">Hình ảnh tham khảo (Tối đa 1 ảnh)</Label>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                {imagePreviews.map((preview, index) => (
-                                    <div key={index} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100 border">
-                                        <Image src={preview} alt={`Preview ${index + 1}`} fill className="object-cover" />
+                            <div className="flex justify-start">
+                                {previewUrl ? (
+                                    <div className="relative group w-40 aspect-square rounded-lg overflow-hidden bg-gray-100 border">
+                                        <Image
+                                            src={previewUrl}
+                                            alt="Preview"
+                                            fill
+                                            className="object-cover"
+                                        />
                                         <button
                                             type="button"
-                                            onClick={() => removeImage(index)}
+                                            onClick={removeImage}
                                             className="absolute top-1 right-1 bg-white/80 hover:bg-white text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
                                             disabled={submitting}
                                         >
-                                            <X size={14} />
+                                            <X size={16} />
                                         </button>
                                     </div>
-                                ))}
-
-                                {/* Nút upload giả lập */}
-                                <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                                        <p className="text-xs text-gray-500 font-semibold">Thêm ảnh</p>
-                                    </div>
-                                    <Input
-                                        id="reference_images"
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={handleImageUpload}
-                                        className="hidden"
-                                        disabled={submitting}
-                                    />
-                                </label>
+                                ) : (
+                                    <label className="flex flex-col items-center justify-center w-40 aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                            <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                            <p className="text-xs text-gray-500 font-semibold text-center px-2">
+                                                Chọn ảnh
+                                            </p>
+                                        </div>
+                                        <Input
+                                            ref={fileInputRef}
+                                            id="reference_image"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                            disabled={submitting}
+                                        />
+                                    </label>
+                                )}
                             </div>
                         </div>
 

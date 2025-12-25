@@ -39,40 +39,65 @@ public class ChatService {
     private final UserRepository userRepository;
     private final ChatMapper chatMapper;
 
+    private final String UPLOAD_DIR = "uploads/chat/";
+
+    // --- HÀM HELPER ĐỂ LƯU FILE ---
+    private String saveFileToSystem(MultipartFile file) {
+        if (file == null || file.isEmpty()) return null;
+        try {
+            // Tạo thư mục nếu chưa tồn tại
+            Files.createDirectories(Paths.get(UPLOAD_DIR));
+
+            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            Path copyLocation = Paths.get(UPLOAD_DIR + fileName);
+            Files.copy(file.getInputStream(), copyLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            return "/uploads/chat/" + fileName;
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi lưu file: " + e.getMessage());
+        }
+    }
+
     @Transactional
-    public ChatInitiateResponse initiateChat(ChatRequest request, String customerEmail) {
+    public ChatInitiateResponse initiateChat(
+            Long artisanId,
+            Long productId,
+            String title,
+            String description,
+            Double budget,
+            MultipartFile referenceImageFile, // Nhận file ảnh
+            String customerEmail
+    ) {
         User customer = userRepository.findByEmail(customerEmail)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
-        User artisan = userRepository.findById(request.getArtisanId())
+        User artisan = userRepository.findById(artisanId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nghệ nhân"));
 
-        // 1. Validate cơ bản
         if (customer.getId().equals(artisan.getId())) {
             throw new RuntimeException("Không thể tự gửi yêu cầu cho chính mình");
         }
 
-        if (request.getProductId() != null) {
-            Product product = productRepository.findById(request.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+        // Xử lý lưu ảnh tham khảo (nếu có)
+        String referenceImagePath = null;
+        if (referenceImageFile != null && !referenceImageFile.isEmpty()) {
+            referenceImagePath = saveFileToSystem(referenceImageFile);
         }
 
-        // Mỗi lần gọi API này là một lần mở một "Deal" hoặc "Project" mới
         Chat newChat = Chat.builder()
                 .customer(customer)
                 .artisan(artisan)
                 .status(Chat.ChatStatus.PENDING)
-                .product(request.getProductId() != null ? new Product() {{ setId(request.getProductId()); }} : null)
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .budget(request.getBudget())
-                .referenceImage(request.getReferenceImage())
+                .product(productId != null ? new Product() {{ setId(productId); }} : null)
+                .title(title)
+                .description(description)
+                .budget(budget)
+                .referenceImage(referenceImagePath) // Lưu đường dẫn file
                 .createdAt(LocalDateTime.now())
                 .build();
 
         Chat savedChat = chatRepository.save(newChat);
 
-        // 3. Trả về kết quả
         return ChatInitiateResponse.builder()
                 .chatId(savedChat.getId())
                 .artisanId(artisan.getId())
@@ -130,7 +155,6 @@ public class ChatService {
         return chatMapper.toMessageResponseList(messages);
     }
 
-    private final String UPLOAD_DIR = "uploads/chat/";
 
     @Transactional
     public ChatMessageResponse processAndSaveMessage(
@@ -147,59 +171,37 @@ public class ChatService {
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Validate user có thuộc chat không (Bảo mật)
-        // ... (Code check security ở đây)
-
         String finalContent = content;
         boolean finalIsImage = isImage;
 
-        // 1. XỬ LÝ UPLOAD ẢNH (Nếu có file)
+        // Tái sử dụng hàm lưu file
         if (file != null && !file.isEmpty()) {
-            try {
-                // Tạo tên file ngẫu nhiên để tránh trùng
-                String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-
-                // Logic lưu file (Ví dụ lưu local)
-                // Cần đảm bảo thư mục tồn tại: Files.createDirectories(Paths.get(UPLOAD_DIR));
-                Path copyLocation = Paths.get(UPLOAD_DIR + fileName);
-                Files.copy(file.getInputStream(), copyLocation, StandardCopyOption.REPLACE_EXISTING);
-
-                // Set content là đường dẫn ảnh
-                // Client sẽ truy cập qua: http://localhost:8080/uploads/chat/ten_file.jpg
-                // Bạn cần cấu hình ResourceHandler trong WebMvcConfig để public thư mục này
-                finalContent = "/uploads/chat/" + fileName;
-                finalIsImage = true;
-
-            } catch (Exception e) {
-                throw new RuntimeException("Lỗi upload ảnh: " + e.getMessage());
-            }
+            finalContent = saveFileToSystem(file);
+            finalIsImage = true;
         }
 
-        // 2. LƯU DATABASE
         ChatMessage message = new ChatMessage();
         message.setChat(chat);
         message.setSender(sender);
 
-        // Parse Enum an toàn
         try {
             message.setSenderType(ChatMessage.SenderType.valueOf(senderTypeStr.toUpperCase()));
         } catch (IllegalArgumentException e) {
-            message.setSenderType(ChatMessage.SenderType.CUSTOMER); // Default
+            message.setSenderType(ChatMessage.SenderType.CUSTOMER);
         }
 
         message.setMessage(finalContent);
-        message.setImage(finalIsImage); // Giả sử Entity có trường này, nếu chưa có thì thêm vào
+        message.setImage(finalIsImage);
 
         ChatMessage savedMsg = chatMessageRepository.save(message);
 
-        // 3. MAP SANG DTO
         return ChatMessageResponse.builder()
                 .id(savedMsg.getId())
                 .senderId(sender.getId())
                 .senderType(savedMsg.getSenderType())
                 .message(savedMsg.getMessage())
-                .isImage(savedMsg.isImage()) // Entity cần có getter này
-                .createdAt(savedMsg.getSentAt()) // hoặc getCreatedAt() tuỳ entity của bạn
+                .isImage(savedMsg.isImage())
+                .createdAt(savedMsg.getSentAt())
                 .build();
     }
 
