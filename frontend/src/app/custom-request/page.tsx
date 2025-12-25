@@ -6,7 +6,8 @@ import Image from "next/image";
 import useMyChats from "@/hooks/useMyChats";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageSquare, Calendar, ChevronRight, User } from "lucide-react";
+// Thêm PlusCircle vào import
+import { Loader2, MessageSquare, Calendar, ChevronRight, PlusCircle } from "lucide-react";
 import { Header, Footer } from "@/components/common";
 
 export default function MyChatsPage() {
@@ -31,10 +32,23 @@ export default function MyChatsPage() {
             <Header />
 
             <main className="flex-grow container mx-auto px-4 py-12">
+                {/* Phần Header của trang */}
                 <div className="mb-12 text-center">
                     <h1 className="text-4xl font-bold mb-3" style={{ color: '#3F2E23' }}>💬 Yêu cầu tùy chỉnh</h1>
                     <div className="h-1 w-24 mx-auto rounded-full mb-4" style={{ backgroundColor: '#D96C39' }}></div>
-                    <p className="text-lg" style={{ color: '#6B4F3E' }}>Quản lý các cuộc trò chuyện và yêu cầu đặt làm riêng</p>
+                    <p className="text-lg mb-6" style={{ color: '#6B4F3E' }}>Quản lý các cuộc trò chuyện và yêu cầu đặt làm riêng</p>
+
+                    {/* --- NÚT BẤM MỚI --- */}
+                    <Link href="/custom-request/new">
+                        <Button
+                            className="inline-flex items-center rounded-full px-6 py-6 shadow-lg hover:scale-105 transition-transform font-semibold text-white"
+                            style={{ backgroundColor: '#D96C39' }}
+                        >
+                            <PlusCircle size={20} className="mr-2" />
+                            Tạo yêu cầu thiết kế mới
+                        </Button>
+                    </Link>
+                    {/* ------------------- */}
                 </div>
 
                 {isLoading ? (
@@ -52,10 +66,16 @@ export default function MyChatsPage() {
                     <div className="text-center py-20 rounded-xl border-2 border-dashed" style={{ borderColor: '#E8D5B5', backgroundColor: '#FFF8F0' }}>
                         <div className="text-8xl mb-6">✉️</div>
                         <h3 className="text-2xl font-semibold mb-3">Bạn chưa có yêu cầu nào</h3>
-                        <p className="mb-8" style={{ color: '#6B4F3E' }}>Hãy chọn một sản phẩm để bắt đầu trao đổi với nghệ nhân.</p>
-                        <Link href="/shop/products">
-                            <Button className="px-8 py-6 rounded-full text-white" style={{ backgroundColor: '#D96C39' }}>Khám phá sản phẩm</Button>
-                        </Link>
+                        <p className="mb-8" style={{ color: '#6B4F3E' }}>Hãy chọn một sản phẩm hoặc tạo yêu cầu mới để bắt đầu.</p>
+
+                        <div className="flex justify-center gap-4">
+                            <Link href="/shop/products">
+                                <Button variant="outline" className="px-6 py-5 rounded-full border-stone-300">Khám phá sản phẩm</Button>
+                            </Link>
+                            <Link href="/custom-request/new">
+                                <Button className="px-6 py-5 rounded-full text-white" style={{ backgroundColor: '#D96C39' }}>Tạo yêu cầu mới</Button>
+                            </Link>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-6 max-w-5xl mx-auto">
@@ -114,7 +134,7 @@ export default function MyChatsPage() {
 
                                         {/* Nút bấm Desktop */}
                                         <div className="hidden md:block text-right">
-                                            <Link href={`/chat/${chatDetail.id}`}>
+                                            <Link href={`/chat/${chatDetail.chat.id}`}>
                                                 <Button className="rounded-full text-white shadow-md hover:scale-105 transition-transform" style={{ backgroundColor: '#3F2E23' }}>
                                                     Tiếp tục chat
                                                     <ChevronRight size={18} className="ml-1" />
@@ -125,7 +145,7 @@ export default function MyChatsPage() {
 
                                     {/* Nút bấm Mobile */}
                                     <div className="md:hidden mt-4">
-                                        <Link href={`/chat/${chatDetail.id}`}>
+                                        <Link href={`/chat/${chatDetail.chat.id}`}>
                                             <Button className="w-full text-white" style={{ backgroundColor: '#3F2E23' }}>
                                                 Mở cuộc trò chuyện
                                             </Button>

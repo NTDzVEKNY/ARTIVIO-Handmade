@@ -52,14 +52,17 @@ public class ChatService {
             throw new RuntimeException("Không thể tự gửi yêu cầu cho chính mình");
         }
 
-        Product product = productRepository.findById(request.getProductId()).orElse(null);
+        if (request.getProductId() != null) {
+            Product product = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+        }
 
         // Mỗi lần gọi API này là một lần mở một "Deal" hoặc "Project" mới
         Chat newChat = Chat.builder()
                 .customer(customer)
                 .artisan(artisan)
                 .status(Chat.ChatStatus.PENDING)
-                .product(product)
+                .product(request.getProductId() != null ? new Product() {{ setId(request.getProductId()); }} : null)
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .budget(request.getBudget())
