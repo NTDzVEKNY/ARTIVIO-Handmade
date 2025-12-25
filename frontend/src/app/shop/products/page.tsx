@@ -46,7 +46,7 @@ function ProductsPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
-    const { addItem } = useCart();
+    const { addItem, buyNow } = useCart();
 
     // 1. Lấy giá trị từ URL làm giá trị khởi tạo (Source of Truth)
     const categoryIdParam = searchParams.get('categoryId') || 'all';
@@ -177,7 +177,23 @@ function ProductsPageContent() {
     };
 
     const handleBuyNow = (e: React.MouseEvent, product: ProductWithCategory) => {
-        handleAddToCart(e, product);
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isProductOutOfStock(product)) {
+            toast.error('Sản phẩm đã hết hàng');
+            return;
+        }
+
+        buyNow({
+            id: product.id,
+            productName: product.name,
+            price: product.price,
+            image: product.image || '/artivio-logo.png',
+            stockQuantity: product.stock_quantity,
+            quantity: 1, // Default to 1 for buy now from product list
+        });
+
         router.push('/checkout');
     };
 

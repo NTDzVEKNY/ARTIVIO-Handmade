@@ -23,11 +23,11 @@ export default withAuth(
 
     // --- Admin-specific Logic ---
     if (isAdmin) {
-      // Admins can access their dashboard pages AND the shared chat pages.
-      if (pathname.startsWith('/admin') || pathname.startsWith('/chat')) {
+      // Admins can only access their dashboard pages.
+      if (pathname.startsWith('/admin')) {
         return NextResponse.next();
       }
-      // For any other client-only page (cart, checkout, account, etc.), redirect them to the admin dashboard.
+      // For any other client-only page (cart, checkout, account, /chat etc.), redirect them to the admin dashboard.
       return redirect('/admin');
     }
 
