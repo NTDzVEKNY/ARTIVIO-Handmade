@@ -22,7 +22,6 @@ public class ChatMapper {
                 .budget(chat.getBudget())
                 .referenceImage(chat.getReferenceImage())
                 .createdAt(chat.getCreatedAt())
-                .messages(chat.getMessages()) // Lưu ý: Cần đảm bảo list này không gây lỗi Lazy Loading
                 // Map Customer
                 .customer(chat.getCustomer() != null ?
                         new ChatDataResponse.CustomerDTO() {{
@@ -46,6 +45,8 @@ public class ChatMapper {
                             setPrice(chat.getProduct().getPrice());
                             setImage(chat.getProduct().getImage());
                         }} : null)
+                // Map Messages
+                .messages(toMessageResponseList(chat.getMessages()))
                 .build();
     }
 

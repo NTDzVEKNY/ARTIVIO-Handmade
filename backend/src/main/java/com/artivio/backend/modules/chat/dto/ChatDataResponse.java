@@ -1,6 +1,7 @@
 package com.artivio.backend.modules.chat.dto;
 
 import com.artivio.backend.modules.chat.model.ChatMessage;
+import com.artivio.backend.modules.chat.dto.ChatMessageResponse;
 import lombok.Data;
 import lombok.Builder;
 import lombok.AllArgsConstructor;
@@ -21,7 +22,7 @@ public class ChatDataResponse {
     private Double budget;
     private String referenceImage;
     private LocalDateTime createdAt;
-    private List<ChatMessage> messages;
+    private List<ChatMessageResponse> messages;
 
     @Data
     public static class CustomerDTO {

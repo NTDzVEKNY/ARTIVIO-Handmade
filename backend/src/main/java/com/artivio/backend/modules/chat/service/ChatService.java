@@ -114,7 +114,7 @@ public class ChatService {
             throw new RuntimeException("Bạn không có quyền truy cập cuộc trò chuyện này");
         }
 
-        List<ChatMessage> messages = chatRepository.findById(chatId).get().getMessages();
+        List<ChatMessage> messages = chatMessageRepository.findByChatIdOrderBySentAtAsc(chatId);
 
         return chatMapper.toMessageResponseList(messages);
     }
