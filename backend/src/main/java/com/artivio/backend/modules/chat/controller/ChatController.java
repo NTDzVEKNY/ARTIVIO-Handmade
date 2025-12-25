@@ -13,6 +13,7 @@ import com.artivio.backend.modules.chat.dto.ChatDataResponse;
 import com.artivio.backend.modules.chat.dto.ChatMessageResponse;
 import java.util.List;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -85,4 +86,12 @@ public class ChatController {
     ) {
         return ResponseEntity.ok(chatService.getMyChats(userDetails.getUsername()));
     }
+
+    @GetMapping("/all-chats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<ChatDataResponse>> getAllChats() {
+        return ResponseEntity.ok(chatService.getAllChats());
+    }
+
+
 }
