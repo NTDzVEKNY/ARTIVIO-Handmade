@@ -6,6 +6,8 @@ import { Plus, Edit, Trash, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Product, Category } from '@/types';
 import { fetchApi } from '@/services/api';
+import { RawCategoryResponse } from '@/types/apiTypes';
+import { mapToEnrichedCategory } from '@/utils/CategoryMapper';
 import { DataTable } from '@/components/ui/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import toast, { Toast } from 'react-hot-toast';
@@ -60,7 +62,8 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
     const getCategories = async () => {
       try {
         setIsLoading(true);
-        const cats = await fetchApi<Category[]>('/categories');
+        const rawCats = await fetchApi<RawCategoryResponse[]>('/category');
+        const cats = rawCats.map(mapToEnrichedCategory);
         setCategories(cats);
       } catch (error) {
         console.error("Failed to fetch categories", error);
@@ -156,6 +159,8 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
         try {
             await fetchApi(`/products/${productId}`, { method: 'DELETE' });
             toast.success(`Đã xóa sản phẩm "${productName}" thành công.`);
+            // Trigger custom event to refresh products list
+            window.dispatchEvent(new Event('products-refresh'));
             router.refresh(); // Tải lại dữ liệu từ server để cập nhật bảng
         } catch (error) {
             console.error("Failed to delete product:", error);
@@ -170,10 +175,14 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
       header: () => <div style={{ width: '200px', minWidth: '300px' }}>Sản phẩm</div>,
       cell: ({ row }) => {
         const product = row.original;
+        // Normalize image URL: convert protocol-relative URLs (//) to absolute URLs (https://)
+        const imageUrl = product.image 
+          ? (product.image.startsWith('//') ? `https:${product.image}` : product.image)
+          : '/artivio-logo.png';
         return (
           <div className="flex items-center gap-4 font-medium" style={{ color: '#3F2E23' }}>
             <div className="flex-shrink-0">
-              <Image src={product.image || '/artivio-logo.png'} alt={product.name} width={48} height={48} className="rounded-md object-cover" />
+              <Image src={imageUrl} alt={product.name} width={48} height={48} className="rounded-md object-cover" />
             </div>
             <span className="font-bold">{product.name}</span>
           </div>
@@ -294,9 +303,9 @@ export const ProductsClient: React.FC<ProductsClientProps> = ({ data }) => {
                     >
                         Tất cả
                     </button>
-                    {categories.map((category) => (
+                    {categories.map((category, index) => (
                         <button
-                            key={category.id}
+                            key={category.id ?? `category-${index}`}
                             onClick={() => setSelectedCategoryId(category.id)}
                             className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-sm border"
                             style={{

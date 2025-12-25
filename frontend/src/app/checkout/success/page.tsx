@@ -6,15 +6,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
-import type { Order } from '@/types';
+import type { StoredOrder } from '@/lib/ordersStorage';
 import { fetchApi } from '@/services/api';
+import { RawOrderDetail } from '@/types/apiTypes';
 
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderId = searchParams.get('orderId');
   const orderNumber = searchParams.get('orderNumber');
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<StoredOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,8 +26,68 @@ export default function CheckoutSuccessPage() {
 
     const fetchOrder = async () => {
       try {
-        const orderData = await fetchApi<Order>(`/orders?orderId=${orderId}`);
-        setOrder(orderData);
+        // Fetch order from backend API
+        const orderData = await fetchApi<RawOrderDetail>(`/orders/${orderId}`);
+        
+        // Map backend response to StoredOrder format
+        const mapBackendStatusToFrontend = (backendStatus: string): StoredOrder['status'] => {
+          switch (backendStatus) {
+            case 'PENDING':
+              return 'pending';
+            case 'IN_PROGRESS':
+              return 'processing';
+            case 'COMPLETED':
+              return 'delivered';
+            case 'CANCELLED':
+              return 'cancelled';
+            default:
+              return 'pending';
+          }
+        };
+
+        const mapBackendPaymentMethodToFrontend = (backendMethod: string): StoredOrder['paymentMethod'] => {
+          switch (backendMethod) {
+            case 'COD':
+              return 'cod';
+            case 'ONLINE':
+              return 'bank_transfer'; // Default ONLINE to bank_transfer
+            default:
+              return 'cod';
+          }
+        };
+
+        // Calculate subtotal from items
+        const subtotal = orderData.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+        
+        // Map the order
+        const mappedOrder: StoredOrder = {
+          id: orderData.id,
+          orderNumber: `ART-${orderData.id}`,
+          customerName: orderData.customerName,
+          phone: orderData.customerPhone,
+          status: mapBackendStatusToFrontend(orderData.status),
+          createdAt: orderData.orderDate,
+          subtotal: Number(subtotal),
+          shippingFee: Number(orderData.shippingFee || 0),
+          total: Number(orderData.totalPrice),
+          paymentMethod: mapBackendPaymentMethodToFrontend(orderData.paymentMethod),
+          shippingAddress: {
+            fullName: orderData.customerName,
+            phone: orderData.customerPhone,
+            email: '', // Backend doesn't provide email in OrderDetailDTO
+            address: orderData.shippingAddress,
+            note: orderData.note || undefined,
+          },
+          items: orderData.items.map((item) => ({
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            price: Number(item.price),
+            image: item.productImage || undefined,
+          })),
+        };
+
+        setOrder(mappedOrder);
       } catch (error) {
         console.error('Error fetching order:', error);
       } finally {
@@ -82,6 +143,10 @@ export default function CheckoutSuccessPage() {
         return 'Chuyển khoản ngân hàng';
       case 'credit_card':
         return 'Thẻ tín dụng/Ghi nợ';
+      case 'ONLINE':
+        return 'Chuyển khoản ngân hàng';
+      case 'COD':
+        return 'Thanh toán khi nhận hàng (COD)';
       default:
         return method;
     }
@@ -185,7 +250,7 @@ export default function CheckoutSuccessPage() {
                   <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                     {item.image && (
                       <Image
-                        src={item.image}
+                        src={item.image?.startsWith('//') ? `https:${item.image}` : item.image || '/artivio-logo.png'}
                         alt={item.productName}
                         fill
                         className="object-cover"

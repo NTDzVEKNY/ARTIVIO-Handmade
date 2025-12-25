@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
 import com.artivio.backend.modules.order.dto.OrderDetailDTO;
+import com.artivio.backend.modules.order.dto.AdminOrderListDTO;
 
 
 import java.math.BigDecimal;
@@ -154,6 +155,20 @@ public class OrderService {
             throw new RuntimeException("Đơn đã hủy không thể cập nhật trạng thái khác!");
         }
 
+        // Validate status value against allowed ENUM values
+        String[] allowedStatuses = {"PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"};
+        boolean isValidStatus = false;
+        for (String allowed : allowedStatuses) {
+            if (allowed.equals(newStatus)) {
+                isValidStatus = true;
+                break;
+            }
+        }
+        
+        if (!isValidStatus) {
+            throw new RuntimeException("Trạng thái không hợp lệ: " + newStatus + ". Các trạng thái hợp lệ: PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED");
+        }
+
         order.setStatus(newStatus);
         return orderRepository.save(order);
     }
@@ -206,5 +221,13 @@ public class OrderService {
 
         List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(user.getId());
         return orders.stream().map(orderMapper::mapToDTO).collect(Collectors.toList());
+    }
+
+    // --- LẤY TẤT CẢ ĐƠN HÀNG CHO ADMIN ---
+    public List<AdminOrderListDTO> getAllOrdersForAdmin() {
+        List<Order> orders = orderRepository.findAll();
+        // Sort by created date descending
+        orders.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+        return orders.stream().map(orderMapper::mapToAdminListDTO).collect(Collectors.toList());
     }
 }

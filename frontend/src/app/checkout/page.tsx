@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { ShippingAddress, PaymentMethod } from '@/types';
 import { fetchApi } from '@/services/api';
-import { appendOrderToStorage } from '@/lib/ordersStorage';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -47,10 +46,11 @@ export default function CheckoutPage() {
       newErrors.fullName = 'Vui lòng nhập họ và tên';
     }
 
+    // Backend expects: phone must start with 0 and be exactly 10 digits
     if (!shippingAddress.phone.trim()) {
       newErrors.phone = 'Vui lòng nhập số điện thoại';
-    } else if (!/^[0-9]{10,11}$/.test(shippingAddress.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Số điện thoại không hợp lệ';
+    } else if (!/^0\d{9}$/.test(shippingAddress.phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'Số điện thoại không hợp lệ (phải có 10 số và bắt đầu bằng số 0)';
     }
 
     if (!shippingAddress.email.trim()) {
@@ -59,8 +59,16 @@ export default function CheckoutPage() {
       newErrors.email = 'Email không hợp lệ';
     }
 
+    // Backend expects: address must be at least 10 characters
     if (!shippingAddress.address.trim()) {
       newErrors.address = 'Vui lòng nhập địa chỉ';
+    } else if (shippingAddress.address.trim().length < 10) {
+      newErrors.address = 'Địa chỉ phải chi tiết hơn (tối thiểu 10 ký tự)';
+    }
+
+    // Backend expects: note max 200 characters
+    if (shippingAddress.note && shippingAddress.note.length > 200) {
+      newErrors.note = 'Ghi chú tối đa 200 ký tự';
     }
 
     setErrors(newErrors);
@@ -77,48 +85,42 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
+      // Map payment method to backend format: cod -> COD, others -> ONLINE
+      const backendPaymentMethod = paymentMethod === 'cod' ? 'COD' : 'ONLINE';
+
+      // Format phone number (remove spaces)
+      const phoneNumber = shippingAddress.phone.replace(/\s/g, '');
+
+      // Prepare order items in backend format
       const orderItems = items.map((item) => ({
-        product_id: item.id,
-        productName: item.productName,
-        price: Number(item.price),
+        productId: item.id,
         quantity: item.quantity,
-        image: item.image,
       }));
 
+      // Prepare order data matching backend OrderRequestDTO
       const orderData = {
+        phoneNumber,
+        address: shippingAddress.address.trim(),
+        note: shippingAddress.note?.trim() || undefined,
+        paymentMethod: backendPaymentMethod,
         items: orderItems,
-        shippingAddress,
-        paymentMethod,
-        subtotal,
-        shippingFee,
-        total,
       };
 
-      const response = await fetchApi<{ orderId: number; orderNumber: string }>('/orders', {
+      // Call backend API endpoint
+      const response = await fetchApi<{
+        id: number;
+        status: string;
+        totalPrice: number;
+        paymentMethod: string;
+        createdAt: string;
+      }>('/orders/create', {
         method: 'POST',
         body: JSON.stringify(orderData),
       });
 
-      appendOrderToStorage({
-        id: response.orderId,
-        orderNumber: response.orderNumber || `ART-${response.orderId}`,
-        customerName: shippingAddress.fullName,
-        phone: shippingAddress.phone,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        subtotal,
-        shippingFee,
-        total,
-        paymentMethod,
-        shippingAddress,
-        items: orderItems.map((item) => ({
-          productId: item.product_id,
-          productName: item.productName,
-          quantity: item.quantity,
-          price: Number(item.price),
-          image: item.image,
-        })),
-      });
+      // Extract order ID from response
+      const orderId = response.id;
+      const orderNumber = `ART-${orderId}`;
 
       // Clear cart after successful order
       clearCart();
@@ -128,12 +130,37 @@ export default function CheckoutPage() {
 
       // Redirect to success page after a short delay
       setTimeout(() => {
-        router.push(`/checkout/success?orderId=${response.orderId}&orderNumber=${response.orderNumber}`);
+        router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderNumber}`);
       }, 1500);
     } catch (error: unknown) {
       console.error('Order submission error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.';
-      alert(errorMessage);
+      
+      // Handle backend validation errors
+      if (error instanceof Error) {
+        try {
+          // Try to parse error message as JSON (backend validation errors)
+          const errorData = JSON.parse(error.message);
+          if (typeof errorData === 'object' && errorData !== null) {
+            // Backend returns Map<String, String> for validation errors
+            const backendErrors: Record<string, string> = {};
+            Object.keys(errorData).forEach((key) => {
+              // Map backend field names to frontend field names
+              if (key === 'phoneNumber') {
+                backendErrors.phone = errorData[key];
+              } else {
+                backendErrors[key] = errorData[key];
+              }
+            });
+            setErrors(backendErrors);
+            return;
+          }
+        } catch {
+          // Not a JSON error, use the error message as is
+        }
+        alert(error.message);
+      } else {
+        alert('Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.');
+      }
     } finally {
       setIsSubmitting(false);
     }

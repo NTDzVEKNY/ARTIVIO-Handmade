@@ -51,7 +51,7 @@ export const ProductEditForm: React.FC<ProductEditFormProps> = ({ initialData })
   useEffect(() => {
     const getCategories = async () => {
       try {
-        const cats = await fetchApi<Category[]>('/categories');
+        const cats = await fetchApi<Category[]>('/category');
         setCategories(cats);
         if (initialData === null && cats.length > 0) {
             setCategoryId(cats[0].id);
@@ -84,6 +84,8 @@ export const ProductEditForm: React.FC<ProductEditFormProps> = ({ initialData })
         } else {
             // This form is for editing only
         }
+        // Trigger refresh event for products list (in case user navigates back)
+        window.dispatchEvent(new Event('products-refresh'));
         router.push(`/admin/products/${initialData?.id}`);
         router.refresh();
     } catch (error) {

@@ -42,6 +42,13 @@ public class HandmadeService {
         return categoryRepository.findAllWithTotalSold();
     }
 
+    // Get product by ID (for admin - returns product regardless of status)
+    public ProductResponseDto getProductById(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+        return productMapper.toResponseDto(product);
+    }
+
     // Lấy danh sách sản phẩm
     public PaginatedResponseDto<ProductResponseDto> getAllProducts(ProductFilterDto filterDto) {
         // 1. Xử lý Sort
@@ -189,8 +196,11 @@ public class HandmadeService {
                 predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.getMaxPrice()));
             }
 
-            // 3. Đảm bảo status là ACTIVE (Logic ẩn thường có)
-            predicates.add(cb.equal(root.get("status"), "ACTIVE"));
+            // 4. Đảm bảo status là ACTIVE (chỉ khi không phải admin)
+            // Admin có thể xem tất cả sản phẩm (ACTIVE và HIDDEN)
+            if (filter.getAdmin() == null || !filter.getAdmin()) {
+                predicates.add(cb.equal(root.get("status"), "ACTIVE"));
+            }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
