@@ -1,7 +1,7 @@
 'use client';
 
 import {useState, useEffect} from 'react';
-import {useParams} from 'next/navigation';
+import {useParams, useRouter} from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/components/common/Header';
@@ -15,8 +15,9 @@ import { ProductWithCategory, mapToProductWithCategory} from "@/utils/ProductMap
 
 export default function ProductDetailPage() {
     const params = useParams();
+    const router = useRouter();
     const productId = Number(params.id);
-    const {addItem} = useCart();
+    const {addItem, buyNow} = useCart();
 
     const [product, setProduct] = useState<ProductWithCategory | null>(null);
     const [categoryName, setCategoryName] = useState<string | null>(null);
@@ -92,9 +93,17 @@ export default function ProductDetailPage() {
     };
 
     const handleBuyNow = () => {
-        handleAddToCart();
-        // In a real app, you would redirect to checkout
-        // For now, we'll just add to cart which is handled by handleAddToCart
+        if (!product || !product.id) return;
+
+        buyNow({
+            id: product.id,
+            productName: product.name,
+            price: Number(product.price ?? 0),
+            image: product.image ? (product.image.startsWith('//') ? `https:${product.image}` : product.image) : product.image || '/hero-handmade.jpg',
+            stockQuantity: product.stock_quantity,
+            quantity: quantity,
+        });
+        router.push('/checkout');
     };
 
     return (
@@ -223,13 +232,12 @@ export default function ProductDetailPage() {
                                         </button>
                                     )}
                                     {!isProductOutOfStock(product) && (
-                                        <Link
-                                            href="/cart"
+                                        <button
                                             className="bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
                                             onClick={handleBuyNow}
                                         >
                                             Mua ngay
-                                        </Link>
+                                        </button>
                                     )}
                                 </div>
                             </div>

@@ -40,7 +40,7 @@ export default function FeaturedProducts() {
     }, []);
 
     const router = useRouter();
-    const { addItem } = useCart();
+    const { addItem, buyNow } = useCart();
 
     const handleAddToCart = (e: React.MouseEvent, product: ProductWithCategory) => {
         e.preventDefault();
@@ -64,7 +64,23 @@ export default function FeaturedProducts() {
     };
 
     const handleBuyNow = (e: React.MouseEvent, product: ProductWithCategory) => {
-        handleAddToCart(e, product);
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isProductOutOfStock(product)) {
+            toast.error('Sản phẩm đã hết hàng');
+            return;
+        }
+
+        buyNow({
+            id: product.id,
+            productName: product.name,
+            price: product.price,
+            image: product.image || '/artivio-logo.png',
+            stockQuantity: product.stock_quantity,
+            quantity: 1,
+        });
+
         router.push('/checkout');
     };
 

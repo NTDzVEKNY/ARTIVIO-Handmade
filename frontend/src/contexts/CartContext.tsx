@@ -9,6 +9,7 @@ interface CartContextType {
   removeItem: (id: number) => void;
   updateQuantity: (id: number, quantity: number) => void;
   clearCart: () => void;
+  buyNow: (item: CartItem) => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
   getItemQuantity: (id: number) => number;
@@ -102,6 +103,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   };
 
+   const buyNow = (newItem: CartItem) => {
+    const quantity = Math.min(newItem.quantity || 1, newItem.stockQuantity ?? 9999);
+    setItems([{ ...newItem, quantity }]);
+  };
+
   const getTotalItems = () => {
     return items.reduce((total, item) => total + item.quantity, 0);
   };
@@ -126,6 +132,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeItem,
         updateQuantity,
         clearCart,
+        buyNow,
         getTotalItems,
         getTotalPrice,
         getItemQuantity,
