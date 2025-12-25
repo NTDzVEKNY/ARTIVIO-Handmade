@@ -7,7 +7,15 @@ import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 
-// Helper xử lý ảnh đã có của bạn
+// --- THEME CONSTANTS (Đồng bộ với các trang khác) ---
+const THEME = {
+    textPrimary: '#3F2E23',   // Nâu đậm
+    textSecondary: '#6B4F3E', // Nâu vừa
+    border: '#E8D5B5',        // Be
+    bgLight: '#FFF8F0',       // Kem nhạt
+};
+
+// Helper xử lý ảnh
 const getProductImageUrl = (imagePath?: string | null) => {
     if (!imagePath) return '/artivio-logo.png';
     if (imagePath.startsWith('//')) return `https:${imagePath}`;
@@ -19,13 +27,23 @@ const getProductImageUrl = (imagePath?: string | null) => {
 export const columns: ColumnDef<any>[] = [
     {
         accessorKey: "chat.id",
-        header: "ID",
+        header: ({ column }) => (
+            <div style={{ color: THEME.textSecondary }}>ID</div>
+        ),
+        cell: ({ row }) => (
+            <span style={{ color: THEME.textPrimary }}>{row.original.chat.id}</span>
+        ),
     },
     {
         id: "productImage",
-        header: "Ảnh",
+        header: ({ column }) => (
+            <div style={{ color: THEME.textSecondary }}>Ảnh</div>
+        ),
         cell: ({ row }) => (
-            <div className="h-10 w-10 relative rounded overflow-hidden border">
+            <div
+                className="h-10 w-10 relative rounded overflow-hidden border"
+                style={{ borderColor: THEME.border }}
+            >
                 <Image
                     src={getProductImageUrl(row.original.product?.image)}
                     alt="Product"
@@ -37,36 +55,82 @@ export const columns: ColumnDef<any>[] = [
     },
     {
         id: "title",
-        header: "Tiêu đề yêu cầu",
+        header: ({ column }) => (
+            <div style={{ color: THEME.textSecondary }}>Tiêu đề yêu cầu</div>
+        ),
         cell: ({ row }) => (
-            <div className="max-w-[200px] truncate font-medium">
+            <div
+                className="max-w-[200px] truncate font-medium"
+                style={{ color: THEME.textPrimary }}
+            >
                 {row.original.chat.title}
             </div>
         ),
     },
     {
         id: "customer",
-        header: "Khách hàng",
+        header: ({ column }) => (
+            <div style={{ color: THEME.textSecondary }}>Khách hàng</div>
+        ),
         cell: ({ row }) => (
             <div className="flex flex-col">
-                <span className="text-sm font-semibold">{row.original.customer?.name || "N/A"}</span>
-                <span className="text-xs text-slate-500">{row.original.customer?.email}</span>
+                <span
+                    className="text-sm font-semibold"
+                    style={{ color: THEME.textPrimary }}
+                >
+                    {row.original.customer?.name || "N/A"}
+                </span>
+                <span
+                    className="text-xs"
+                    style={{ color: THEME.textSecondary }}
+                >
+                    {row.original.customer?.email}
+                </span>
             </div>
         ),
     },
     {
         id: "status",
-        header: "Trạng thái",
+        header: ({ column }) => (
+            <div style={{ color: THEME.textSecondary }}>Trạng thái</div>
+        ),
         cell: ({ row }) => {
             const status = row.original.chat.status;
-            const statusMap: Record<string, { label: string; className: string }> = {
-                PENDING: { label: "Đang chờ", className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-                IN_PROGRESS: { label: "Đang xử lý", className: "bg-blue-100 text-blue-800 border-blue-200" },
-                COMPLETED: { label: "Hoàn thành", className: "bg-green-100 text-green-800 border-green-200" },
+            // Tùy chỉnh Badge để mềm mại hơn, hợp với theme Artisan
+            const statusMap: Record<string, { label: string; className: string; style: React.CSSProperties }> = {
+                PENDING: {
+                    label: "Đang chờ",
+                    className: "bg-yellow-50 text-yellow-700 border-yellow-200",
+                    style: {}
+                },
+                IN_PROGRESS: {
+                    label: "Đang xử lý",
+                    className: "bg-blue-50 text-blue-700 border-blue-200",
+                    style: {}
+                },
+                COMPLETED: {
+                    label: "Hoàn thành",
+                    className: "bg-green-50 text-green-700 border-green-200",
+                    style: {}
+                },
+                CLOSED: {
+                    label: "Đã đóng",
+                    className: "bg-gray-100 text-gray-600 border-gray-200",
+                    style: {}
+                }
             };
-            const config = statusMap[status] || { label: status, className: "bg-gray-100" };
+
+            const config = statusMap[status] || {
+                label: status,
+                className: "bg-gray-100",
+                style: {}
+            };
+
             return (
-                <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${config.className}`}>
+                <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${config.className}`}
+                    style={config.style}
+                >
                     {config.label}
                 </span>
             );
@@ -74,16 +138,29 @@ export const columns: ColumnDef<any>[] = [
     },
     {
         id: "createdAt",
-        header: "Ngày tạo",
-        cell: ({ row }) => formatDate(row.original.chat.created_at),
+        header: ({ column }) => (
+            <div style={{ color: THEME.textSecondary }}>Ngày tạo</div>
+        ),
+        cell: ({ row }) => (
+            <span style={{ color: THEME.textSecondary }}>
+                {formatDate(row.original.chat.created_at)}
+            </span>
+        ),
     },
     {
         id: "actions",
-        header: "Hành động",
+        header: "",
         cell: ({ row }) => (
-            <Link href={`/chat/${row.original.chat.id}`}>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <ChevronRight className="h-4 w-4" />
+            <Link href={`/admin/chat/${row.original.chat.id}`}>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-[#FFF8F0]" // Hover background: bgLight
+                >
+                    <ChevronRight
+                        className="h-4 w-4"
+                        style={{ color: THEME.textPrimary }}
+                    />
                 </Button>
             </Link>
         ),

@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAxiosAuth from '@/hooks/useAxiosAuth';
-import { Category } from '@/types';
+import { RawCategoryResponse } from '@/types/apiTypes';
+import {mapToEnrichedCategory, EnrichedCategory } from "@/utils/CategoryMapper";
 
 const NewProductPage = () => {
     const router = useRouter();
@@ -36,16 +37,16 @@ const NewProductPage = () => {
         }
     };
 
-    const [categories, setCategories] = useState<Category[]>([]);
+        const [categories, setCategories] = useState<EnrichedCategory[]>([]);
 
     // 2. Fetch Categories dùng axiosAuth
     useEffect(() => {
         const fetchCategories = async () => {
             try {
                 // Sử dụng axiosAuth.get
-                const response = await axiosAuth.get<Category[]>('/category');
-                setCategories(response.data); // Lấy data từ response
-                console.log('>>> Categories data:', response.data);
+                const response = await axiosAuth.get<RawCategoryResponse[]>('/category');
+                const cats = response.data.map(mapToEnrichedCategory);
+                setCategories(cats);
             } catch (error) {
                 console.error('Failed to fetch categories:', error);
                 toast.error('Không thể tải danh sách danh mục');
@@ -178,7 +179,7 @@ const NewProductPage = () => {
                                 >
                                     <option value="">Chọn danh mục...</option>
                                     {categories.map((cat) => (
-                                        <option key={cat.categoryId} value={cat.categoryId}>
+                                        <option key={cat.id} value={cat.id}>
                                             {cat.name}
                                         </option>
                                     ))}
