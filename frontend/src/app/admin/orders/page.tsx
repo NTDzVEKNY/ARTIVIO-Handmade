@@ -247,14 +247,14 @@ const AdminOrdersPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Mã đơn</TableHead>
+                <TableHead className="w-25">Mã đơn</TableHead>
                 <TableHead>Khách hàng</TableHead>
                 <TableHead>Điện thoại</TableHead>
                 <TableHead>Tổng tiền</TableHead>
                 <TableHead>Thanh toán</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead>Ngày tạo</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
+                <TableHead className="text-center">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
