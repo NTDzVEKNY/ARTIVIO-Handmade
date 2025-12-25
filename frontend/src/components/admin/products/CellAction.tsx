@@ -33,6 +33,8 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
       await fetchApi(`/products/${data.id}`, {
         method: 'DELETE',
       });
+      // Trigger custom event to refresh products list
+      window.dispatchEvent(new Event('products-refresh'));
       router.refresh();
     } catch (error) {
       console.error('Failed to delete product', error);

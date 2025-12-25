@@ -19,5 +19,5 @@ export const createProduct = async (data: ProductPayload) => {
   });
 };
 export const getCategories = async (): Promise<Category[]> => {
-  return fetchApi('/categories');
+  return fetchApi('/category');
 };

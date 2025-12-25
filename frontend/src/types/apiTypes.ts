@@ -75,3 +75,27 @@ export interface RawOrderDetail {
     note: string | null;
     items: RawOrderDetailItem[];
 }
+
+export interface RawAdminOrderListItem {
+    productId: number;
+    productName: string;
+    quantity: number;
+    price: number;
+    image: string | null;
+}
+
+export interface RawAdminOrderList {
+    id: number;
+    orderNumber: string;
+    customerName: string;
+    phone: string;
+    status: string;
+    createdAt: string; // ISO String
+    subtotal: number;
+    shippingFee: number;
+    total: number;
+    paymentMethod: string;
+    shippingAddress: string;
+    note: string | null;
+    items: RawAdminOrderListItem[];
+}

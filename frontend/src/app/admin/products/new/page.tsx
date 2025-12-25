@@ -34,7 +34,7 @@ const NewProductPage = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const categoriesData = await fetchApi<Category[]>('/categories');
+      const categoriesData = await fetchApi<Category[]>('/category');
       setCategories(categoriesData);
     };
 

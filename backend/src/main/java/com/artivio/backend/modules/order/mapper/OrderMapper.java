@@ -2,6 +2,7 @@ package com.artivio.backend.modules.order.mapper;
 
 import com.artivio.backend.modules.order.dto.OrderRequestDTO;
 import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
+import com.artivio.backend.modules.order.dto.AdminOrderListDTO;
 import com.artivio.backend.modules.order.model.Chat;
 import com.artivio.backend.modules.order.model.Order;
 import com.artivio.backend.modules.order.model.User;
@@ -30,11 +31,11 @@ public class OrderMapper {
         }
         Order order = new Order();
 
-        if (dto.getCustomerId() != null) {
-            User customer = userRepository.findById(dto.getCustomerId())
-                    .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getCustomerId()));
-            order.setCustomer(customer);
-        }
+        // Handle customer: use provided customerId or default to guest customer (ID 2)
+        Long customerIdToUse = dto.getCustomerId() != null ? dto.getCustomerId() : 2L; // Default to user ID 2 for guest checkout
+        User customer = userRepository.findById(customerIdToUse)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + customerIdToUse));
+        order.setCustomer(customer);
 
         order.setArtisanId(dto.getArtisanId());
 
@@ -106,6 +107,47 @@ public class OrderMapper {
                 .customerPhone(order.getPhoneNumber())
                 .note(order.getNote())
                 .orderDate(order.getCreatedAt()) // Thường Entity sẽ có field createdAt
+                .items(items)
+                .build();
+    }
+
+    public AdminOrderListDTO mapToAdminListDTO(Order order) {
+        if (order == null) {
+            return null;
+        }
+
+        // Map order items
+        List<AdminOrderListDTO.OrderItemDTO> items = order.getOrderItems().stream()
+                .map(item -> AdminOrderListDTO.OrderItemDTO.builder()
+                        .productId(item.getProduct().getId())
+                        .productName(item.getProduct().getProductName())
+                        .quantity(item.getQuantity())
+                        .price(item.getPriceOrder())
+                        .image(item.getProduct().getImage())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Calculate subtotal from items
+        BigDecimal subtotal = order.getOrderItems().stream()
+                .map(item -> item.getPriceOrder().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Shipping fee is not stored in Order entity, default to 0
+        BigDecimal shippingFee = BigDecimal.ZERO;
+
+        return AdminOrderListDTO.builder()
+                .id(order.getId())
+                .orderNumber("ART-" + order.getId())
+                .customerName(order.getCustomer() != null ? order.getCustomer().getUsername() : "N/A")
+                .phone(order.getPhoneNumber())
+                .status(order.getStatus())
+                .createdAt(order.getCreatedAt())
+                .subtotal(subtotal)
+                .shippingFee(shippingFee)
+                .total(order.getTotalPrice())
+                .paymentMethod(order.getPaymentMethod())
+                .shippingAddress(order.getAddress())
+                .note(order.getNote())
                 .items(items)
                 .build();
     }

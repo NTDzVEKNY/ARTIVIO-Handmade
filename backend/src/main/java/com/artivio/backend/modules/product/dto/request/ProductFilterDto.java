@@ -24,6 +24,8 @@ public class ProductFilterDto {
     private Double minPrice;
     private Double maxPrice;
 
+    // Admin flag: if true, returns all products regardless of status
+    private Boolean admin = false;
 
     // Getter tiện ích để lấy keyword sạch
     public String getKeyword() {

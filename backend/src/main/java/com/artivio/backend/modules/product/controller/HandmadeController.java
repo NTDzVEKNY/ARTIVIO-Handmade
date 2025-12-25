@@ -50,6 +50,7 @@ public class HandmadeController {
         PagedResponse<ProductDTO> response = new PagedResponse<>(products);
         return ResponseEntity.ok(response);
     }
+
     // CREATE
     @PostMapping("/products")
     public ResponseEntity<ProductDTO> createProduct(
