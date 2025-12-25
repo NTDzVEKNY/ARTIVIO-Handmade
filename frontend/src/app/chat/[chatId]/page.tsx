@@ -271,7 +271,7 @@ export default function ChatPage() {
                                             )}
                                         </div>
                                         <span className="text-[10px] text-gray-400 mt-1 px-1">
-                                            {new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(message.created_at).toLocaleTimeString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
                                 </div>
