@@ -150,7 +150,7 @@ export default function CustomRequestPage() {
 
             console.log(response);
             toast.success('Yêu cầu đã được gửi thành công!');
-            // router.push(`/chat/${chat.id}`);
+            router.push(`/chat/${response.data.chatId}`);
         } catch (error) {
             toast.error('Có lỗi xảy ra khi gửi yêu cầu');
             console.error(error);

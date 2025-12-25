@@ -15,17 +15,21 @@ import com.artivio.backend.modules.chat.model.ChatMessage;
 import com.artivio.backend.modules.chat.repository.ChatMessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.artivio.backend.modules.chat.dto.ChatRequest;
+import com.artivio.backend.modules.chat.dto.ChatDataResponse;
+import com.artivio.backend.modules.chat.mapper.ChatMapper;
+import com.artivio.backend.modules.chat.dto.ChatMessageResponse;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class ChatService {
 
-    @Autowired
-    private ChatMessageRepository chatMessageRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final ChatRepository chatRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final ChatMapper chatMapper;
 
     @Transactional
     public ChatInitiateResponse initiateChat(ChatRequest request, String customerEmail) {
@@ -83,5 +87,35 @@ public class ChatService {
         // sentAt được xử lý bởi @PrePersist trong Entity rồi
 
         return chatMessageRepository.save(message);
+    }
+
+    public ChatDataResponse getChatData(Long chatId, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+
+        if (!user.getId().equals(chat.getCustomer().getId()) && !user.getId().equals(chat.getArtisan().getId())) {
+            throw new RuntimeException("Bạn không có quyền truy cập cuộc trò chuyện này");
+        }
+
+        return chatMapper.toResponse(chat);
+    }
+
+    public List<ChatMessageResponse> getMessages(Long chatId, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new RuntimeException("Chat not found"));
+
+        if (!user.getId().equals(chat.getCustomer().getId()) && !user.getId().equals(chat.getArtisan().getId())) {
+            throw new RuntimeException("Bạn không có quyền truy cập cuộc trò chuyện này");
+        }
+
+        List<ChatMessage> messages = chatRepository.findById(chatId).get().getMessages();
+
+        return chatMapper.toMessageResponseList(messages);
     }
 }

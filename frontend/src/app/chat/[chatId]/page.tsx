@@ -17,9 +17,13 @@ import {
     getCurrentUser,
     initializeMockChat,
 } from '@/services/customRequestApi';
-import type { Chat, Message, Artisan, User } from '@/types';
+import type { Chat, ChatMessage, Artisan, User } from '@/types';
+import type { RawChatDataResponse, RawChatMessage } from '@/types/apiTypes';
+import {mapChatDetails, mapToChatMessage} from '@/utils/chatMapper';
+import useAxiosAuth from '@/hooks/useAxiosAuth';
 
 export default function ChatPage() {
+    const axiosAuth = useAxiosAuth();
     const params = useParams();
     // const router = useRouter(); // Chưa dùng đến, có thể bỏ
     const chatId = Array.isArray(params.chatId) ? Number(params.chatId[0]) : Number(params.chatId);
@@ -27,7 +31,7 @@ export default function ChatPage() {
     const [chat, setChat] = useState<Chat | null>(null);
     const [artisan, setArtisan] = useState<Artisan | null>(null);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
@@ -59,34 +63,42 @@ export default function ChatPage() {
 
         const loadChatData = async () => {
             try {
-                const [chatData, userData] = await Promise.all([
-                    getChatById(chatId),
-                    getCurrentUser(),
-                ]);
+                // const [chatData, userData] = await Promise.all([
+                //     getChatById(chatId),
+                //     getCurrentUser(),
+                // ]);
+                //
+                // if (!chatData) {
+                //     toast.error('Không tìm thấy cuộc trò chuyện');
+                //     return;
+                // }
+                //
+                // setChat(chatData);
+                // setCurrentUser(userData);
+                //
+                // // Load artisan info
+                // if (chatData.artisan_id) {
+                //     const artisanData = await getArtisanById(chatData.artisan_id);
+                //     setArtisan(artisanData);
+                // }
+                //
+                // // Lấy tin nhắn lần đầu
+                // let msgs = await getChatMessages(chatId);
+                //
+                // // Mock data logic (nếu cần)
+                // if (msgs.length === 0) {
+                //     await initializeMockChat(chatId); // Cẩn thận hàm này nếu chạy production
+                //     msgs = await getChatMessages(chatId);
+                // }
+                // setMessages(msgs);
+                const rawData = await axiosAuth.get<RawChatDataResponse>(`/chat/chatData?chatId=${chatId}`);
+                const mappedData = mapChatDetails(rawData.data);
+                setChat(mappedData.chat);
+                setMessages(mappedData.messages);
+                setArtisan(mappedData.artisan);
+                setCurrentUser(mappedData.customer);
 
-                if (!chatData) {
-                    toast.error('Không tìm thấy cuộc trò chuyện');
-                    return;
-                }
-
-                setChat(chatData);
-                setCurrentUser(userData);
-
-                // Load artisan info
-                if (chatData.artisan_id) {
-                    const artisanData = await getArtisanById(chatData.artisan_id);
-                    setArtisan(artisanData);
-                }
-
-                // Lấy tin nhắn lần đầu
-                let msgs = await getChatMessages(chatId);
-
-                // Mock data logic (nếu cần)
-                if (msgs.length === 0) {
-                    await initializeMockChat(chatId); // Cẩn thận hàm này nếu chạy production
-                    msgs = await getChatMessages(chatId);
-                }
-                setMessages(msgs);
+                console.log(">>> Chat data:", mappedData);
 
             } catch (error) {
                 toast.error('Có lỗi xảy ra khi tải dữ liệu');
@@ -105,14 +117,24 @@ export default function ChatPage() {
 
         const intervalId = setInterval(async () => {
             try {
-                const latestMessages = await getChatMessages(chatId);
-                // Chỉ cập nhật nếu số lượng tin nhắn thay đổi để tránh re-render thừa
+                // const latestMessages = await getChatMessages(chatId);
+                // // Chỉ cập nhật nếu số lượng tin nhắn thay đổi để tránh re-render thừa
+                // setMessages((prev) => {
+                //     if (prev.length !== latestMessages.length) {
+                //         return latestMessages;
+                //     }
+                //     return prev;
+                // });
+
+                const latestMessages = await axiosAuth.get<RawChatMessage[]>(`/chat/getMessages?chatId=${chatId}`);
+                const mappedMessages = latestMessages.data.map((msg) => mapToChatMessage(msg, chatId));
                 setMessages((prev) => {
-                    if (prev.length !== latestMessages.length) {
-                        return latestMessages;
-                    }
-                    return prev;
-                });
+                        if (prev.length !== mappedMessages.length) {
+                            return mappedMessages;
+                        }
+                        return prev;
+                    });
+
             } catch (error) {
                 console.error("Lỗi polling tin nhắn:", error);
             }
@@ -151,38 +173,39 @@ export default function ChatPage() {
     };
 
     const handleSendMessage = async () => {
-        if ((!messageText.trim() && !selectedFile) || !chat || !currentUser) {
-            return;
-        }
-
-        setSending(true);
-
-        try {
-            // Logic gửi tin nhắn
-            // Lưu ý: sendMessage cần được update để nhận tham số là File hoặc string base64 tùy backend
-            const newMessage = await sendMessage(
-                chatId,
-                currentUser.id,
-                'customer',
-                messageText.trim(), // Nếu chỉ gửi ảnh, backend cần chấp nhận content rỗng hoặc bạn gửi text mặc định
-                imagePreview || undefined // Gửi base64 string (như code cũ) hoặc update service để gửi formData
-            );
-
-            // Thêm tin nhắn mới vào state ngay lập tức (Optimistic UI)
-            setMessages((prev) => [...prev, newMessage]);
-
-            // Reset form
-            setMessageText('');
-            removeImagePreview();
-
-        } catch (error) {
-            toast.error('Gửi tin nhắn thất bại');
-            console.error(error);
-        } finally {
-            setSending(false);
-            // Force scroll sau khi gửi
-            setTimeout(scrollToBottom, 100);
-        }
+        // if ((!messageText.trim() && !selectedFile) || !chat || !currentUser) {
+        //     return;
+        // }
+        //
+        // setSending(true);
+        //
+        // try {
+        //     // Logic gửi tin nhắn
+        //     // Lưu ý: sendMessage cần được update để nhận tham số là File hoặc string base64 tùy backend
+        //     // const newMessage = await sendMessage(
+        //     //     chatId,
+        //     //     currentUser.id,
+        //     //     'customer',
+        //     //     messageText.trim(), // Nếu chỉ gửi ảnh, backend cần chấp nhận content rỗng hoặc bạn gửi text mặc định
+        //     //     imagePreview || undefined // Gửi base64 string (như code cũ) hoặc update service để gửi formData
+        //     // );
+        //
+        //
+        //     // Thêm tin nhắn mới vào state ngay lập tức (Optimistic UI)
+        //     setMessages((prev) => [...prev, newMessage]);
+        //
+        //     // Reset form
+        //     setMessageText('');
+        //     removeImagePreview();
+        //
+        // } catch (error) {
+        //     toast.error('Gửi tin nhắn thất bại');
+        //     console.error(error);
+        // } finally {
+        //     setSending(false);
+        //     // Force scroll sau khi gửi
+        //     setTimeout(scrollToBottom, 100);
+        // }
     };
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -192,7 +215,7 @@ export default function ChatPage() {
         }
     };
 
-    const isChatClosed = chat?.status === 'closed';
+    const isChatClosed = chat?.status === 'CLOSED';
 
     if (loading) {
         return (
@@ -223,7 +246,7 @@ export default function ChatPage() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <Link
-                                href={`/custom-request/view/${chat.custom_request_id}`}
+                                href={`/custom-request/view/${chat.id}`}
                                 className="text-gray-600 hover:text-[#0f172a]"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -259,7 +282,7 @@ export default function ChatPage() {
                         </div>
                     ) : (
                         messages.map((message) => {
-                            const isCustomer = message.sender_type === 'customer';
+                            const isCustomer = message.sender_type === 'CUSTOMER';
                             // Logic check "Me": là customer VÀ id khớp với user đang login
                             const isMe = isCustomer && message.sender_id === currentUser?.id;
 
@@ -276,10 +299,10 @@ export default function ChatPage() {
                                                     : 'bg-gray-100 text-gray-800 rounded-bl-none'
                                             }`}
                                         >
-                                            {message.image_url && (
+                                            {message.is_image && (
                                                 <div className="relative w-full min-w-[200px] h-48 rounded-lg overflow-hidden mb-2 bg-gray-300">
                                                     <Image
-                                                        src={message.image_url}
+                                                        src={message.content}
                                                         alt="Message image"
                                                         fill
                                                         className="object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
@@ -287,7 +310,7 @@ export default function ChatPage() {
                                                     />
                                                 </div>
                                             )}
-                                            {message.content && (
+                                            {!message.is_image && (
                                                 // Sử dụng break-words để tránh text dài bị tràn
                                                 <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                                                     {message.content}

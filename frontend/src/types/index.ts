@@ -82,3 +82,16 @@ export type ChatMessage = {
     content: string;
     created_at: string;
 };
+
+export type User = {
+    id: number;
+    name: string;
+    email: string;
+};
+
+export type Artisan = {
+    id: number;
+    name: string;
+    email: string;
+};
+

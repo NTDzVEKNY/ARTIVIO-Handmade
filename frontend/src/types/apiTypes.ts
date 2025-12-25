@@ -99,3 +99,48 @@ export interface RawAdminOrderList {
     note: string | null;
     items: RawAdminOrderListItem[];
 }
+
+
+// Chat
+export interface RawChatMessage {
+    id: number;
+    senderId: number;
+    senderType: string; // 'CUSTOMER' | 'ARTISAN'
+    isImage: boolean;
+    message: string;
+    createdAt: string;
+}
+
+export interface RawChatCustomer {
+    id: number;
+    name: string;
+    email: string;
+}
+
+export interface RawChatArtisan {
+    id: number;
+    name: string;
+    email: string;
+}
+
+export interface RawChatProduct {
+    id: number;
+    name: string;
+    description: string | null;
+    price: number;
+    image: string | null;
+}
+
+export interface RawChatDataResponse {
+    id: number;
+    customer: RawChatCustomer;
+    artisan: RawChatArtisan;
+    product: RawChatProduct | null;
+    status: string; // 'PENDING','IN_PROGRESS','COMPLETED','CANCELLED'
+    title: string;
+    description: string | null;
+    budget: number | null;
+    referenceImage: string | null;
+    createdAt: string;
+    messages: RawChatMessage[];
+}
