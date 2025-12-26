@@ -86,4 +86,52 @@ public class EmailService {
             throw new RuntimeException(e);
         }
     }
+
+    public void sendVerificationEmail(String to, String name, String otp) {
+        try {
+            Context context = new Context();
+            context.setVariable("name", name);
+            context.setVariable("otp", otp);
+
+            String htmlContent = templateEngine.process("otp-forgot-password", context);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("Artivio - Reset Password OTP");
+            helper.setText(htmlContent, true); // true = isHtml
+
+            mailSender.send(message);
+            log.info("HTML Reset Password OTP Email sent to: {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send HTML Reset Password OTP email to {}", to, e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void sendResetPasswordSuccessEmail(String to, String name) {
+        try {
+            Context context = new Context();
+            context.setVariable("loginUrl", loginUrl);
+            context.setVariable("name", name);
+
+            String htmlContent = templateEngine.process("reset-password-success", context);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("Artivio - Password Reset Successful");
+            helper.setText(htmlContent, true); // true = isHtml
+
+            mailSender.send(message);
+            log.info("HTML Password Reset Success Email sent to: {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send HTML Password Reset Success email to {}", to, e);
+            throw new RuntimeException(e);
+        }
+    }
 }
