@@ -15,9 +15,22 @@ export default function MyChatsPage() {
 
     const renderStatusBadge = (status: string) => {
         const statusMap: Record<string, { label: string; className: string }> = {
-            PENDING: { label: "Đang chờ", className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-            IN_PROGRESS: { label: "Đang thảo luận", className: "bg-blue-100 text-blue-800 border-blue-200" },
-            COMPLETED: { label: "Đã xong", className: "bg-green-100 text-green-800 border-green-200" },
+            PENDING: {
+                label: "Đang chờ",
+                className: "bg-yellow-100 text-yellow-800 border-yellow-200"
+            },
+            NEGOTIATING: {
+                label: "Đang thương lượng",
+                className: "bg-blue-100 text-blue-800 border-blue-200"
+            },
+            ORDER_CREATED: {
+                label: "Đơn hàng đã được tạo",
+                className: "bg-green-100 text-green-800 border-green-200"
+            },
+            CLOSED: {
+                label: "Đã đóng",
+                className: "bg-gray-100 text-gray-800 border-gray-200"
+            },
         };
         const config = statusMap[status] || { label: status, className: "bg-gray-100 text-gray-800" };
         return (
