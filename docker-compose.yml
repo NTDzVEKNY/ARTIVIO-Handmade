@@ -59,12 +59,12 @@ services:
             NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-3TrMWRGUBKb5G28j3SdyFUAYuckrKxrmF0SL7+l2AjQ}
 
             # Google
-            GOOGLE_CLIENT_ID=66406740854-d2u8lgu8qfs9phsqtq91hasstkhet4t1.apps.googleusercontent.com
-            GOOGLE_CLIENT_SECRET=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
+            GOOGLE_CLIENT_ID : 66406740854-d2u8lgu8qfs9phsqtq91hasstkhet4t1.apps.googleusercontent.com
+            GOOGLE_CLIENT_SECRET : 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
           
             # Facebook
-            FACEBOOK_CLIENT_ID=1211145857541828
-            FACEBOOK_CLIENT_SECRET=6625eea4b39d4f7ccc4a4a69af5a19c7
+            FACEBOOK_CLIENT_ID : 1211145857541828
+            FACEBOOK_CLIENT_SECRET : 6625eea4b39d4f7ccc4a4a69af5a19c7
         networks:
             - artivio-network
 

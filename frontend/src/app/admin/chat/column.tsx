@@ -20,7 +20,7 @@ const getProductImageUrl = (imagePath?: string | null) => {
     if (!imagePath) return '/artivio-logo.png';
     if (imagePath.startsWith('//')) return `https:${imagePath}`;
     if (imagePath.startsWith('http')) return imagePath;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const apiUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || '';
     return `${apiUrl}${imagePath}`;
 };
 
@@ -106,7 +106,7 @@ export const columns: ColumnDef<any>[] = [
                 },
                 NEGOTIATING: { // Thay thế cho IN_PROGRESS
                     label: "Đang thương lượng",
-                    className: "bg-blue-50 text-blue-700 border-blue-200",
+                    className: "bg-orange-100 text-orange-800 border-orange-200",
                     style: {}
                 },
                 ORDER_CREATED: { // Mới thêm: Khi Artisan gửi Proposal

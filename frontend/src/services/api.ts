@@ -7,7 +7,7 @@ import { getSession } from 'next-auth/react';
  * @returns Promise chứa dữ liệu JSON trả về
  */
 export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+    const baseUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
       
     const url = `${baseUrl}${endpoint}`;
 

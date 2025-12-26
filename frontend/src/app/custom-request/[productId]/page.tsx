@@ -37,7 +37,7 @@ const getProductImageUrl = (imagePath?: string | null) => {
 
     // 4. Trường hợp còn lại: đường dẫn tương đối từ server của mình
     // Thêm safety check `|| ''` phòng trường hợp biến môi trường chưa được set
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    const apiUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || '';
     return `${apiUrl}${imagePath}`;
 };
 // ---------------------------

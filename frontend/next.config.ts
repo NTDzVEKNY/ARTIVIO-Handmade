@@ -30,6 +30,12 @@ const nextConfig: NextConfig = {
                 hostname: 'nanghandmade.com',
                 pathname: '/**',
             },
+            {
+                protocol: 'http',
+                hostname: 'backend',
+                port: '8080',
+                pathname: '/**',
+            }
         ],
     },
 };

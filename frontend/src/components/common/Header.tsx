@@ -138,13 +138,6 @@ export default function Header() {
             </span>
             <span className="absolute left-0 -bottom-1 h-0.5 w-0 rounded-full transition-all duration-300 group-hover:w-full" style={{ backgroundColor: '#F4C27A' }}></span>
           </Link>
-
-          <Link href="#" className="group relative">
-            <span className="text-sm font-medium inline-block transition-colors" style={{ color: '#F7F1E8' }}>
-              Liên hệ
-            </span>
-            <span className="absolute left-0 -bottom-1 h-0.5 w-0 rounded-full transition-all duration-300 group-hover:w-full" style={{ backgroundColor: '#F4C27A' }}></span>
-          </Link>
         </nav>
 
         <div className="flex items-center gap-6">
