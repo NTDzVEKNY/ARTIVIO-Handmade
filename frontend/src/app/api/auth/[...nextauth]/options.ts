@@ -3,19 +3,20 @@ import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/app/api/_lib/mockData";
-import {axiosClient} from "@/lib/axios";
+import axios from "axios"; // Import trực tiếp axios, không dùng instance chung
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8080/api";
+// Ưu tiên đường dẫn nội bộ khi chạy trong Docker
+const INTERNAL_API_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8080/api";
 
 export const authOptions: NextAuthOptions = {
     providers: [
         GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            clientId: process.env.GOOGLE_CLIENT_ID || "",
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
         }),
         FacebookProvider({
-            clientId: process.env.FACEBOOK_CLIENT_ID!,
-            clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+            clientId: process.env.FACEBOOK_CLIENT_ID || "",
+            clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
         }),
         CredentialsProvider({
             name: "Credentials",
@@ -29,43 +30,41 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 try {
+                    // Tạo request riêng cho Server-side Login
+                    // Sử dụng INTERNAL_API_URL để Docker gọi nhau (http://backend:8080/api)
+                    const res = await axios.post(`${INTERNAL_API_URL}/login`, credentials, {
+                        headers: { "Content-Type": "application/json" }
+                    });
 
-                    const loginResponse = await axiosClient.post("/login", credentials);
-
+                    const data = res.data;
 
                     // Trả về object user
                     return {
-                        id: loginResponse.data.id.toString(),
-                        name: loginResponse.data.name,
-                        email: loginResponse.data.email,
-                        role: loginResponse.data.role,
-                        apiAccessToken: loginResponse.data.token,
+                        id: data.id.toString(),
+                        name: data.name,
+                        email: data.email,
+                        role: data.role,
+                        apiAccessToken: data.token,
                     };
-                } catch (error) {
-                    console.error("Login error:", error);
+                } catch (error: any) {
+                    console.error("Login error:", error?.response?.data || error.message);
 
-                    if (error instanceof Error) {
-                        throw new Error(error.message ||"Đăng nhập thất bại");
+                    if (axios.isAxiosError(error)) {
+                        throw new Error(error.response?.data?.message || "Đăng nhập thất bại");
                     }
-
-                    throw new Error( "Đã xảy ra lỗi không xác định");
+                    throw new Error("Đã xảy ra lỗi không xác định");
                 }
             },
         }),
     ],
+    // ... (Giữ nguyên phần callbacks, jwt, session bên dưới)
     callbacks: {
         async signIn({ user, account }) {
             if (!user.email) return false;
+            if (account?.provider === "credentials") return true;
 
-            if (account?.provider === "credentials") {
-                return true;
-            }
-
-            // Logic mock DB cho social login
             const userExists = db.users.some((dbUser) => dbUser.email === user.email);
-
             if (!userExists) {
-                console.log(`User ${user.email} does not exist. Creating new user.`);
                 const newUser = {
                     id: Date.now(),
                     name: user.name || "New User",
@@ -77,15 +76,11 @@ export const authOptions: NextAuthOptions = {
                 };
                 db.users.push(newUser);
             }
-
             return true;
         },
         async jwt({ token, user, account }) {
             if (user && account) {
-                // Lưu role vào token
                 token.role = (user as any).role;
-
-                // Lưu apiAccessToken nếu là credentials login
                 if (account.provider === "credentials") {
                     token.apiAccessToken = (user as any).apiAccessToken;
                 }
@@ -100,9 +95,8 @@ export const authOptions: NextAuthOptions = {
             return session;
         },
     },
-    // Thêm secret để mã hóa token (quan trọng cho production)
     secret: process.env.NEXTAUTH_SECRET,
     pages: {
-        signIn: "/login", // Đường dẫn trang login của bạn
+        signIn: "/login",
     },
 };
