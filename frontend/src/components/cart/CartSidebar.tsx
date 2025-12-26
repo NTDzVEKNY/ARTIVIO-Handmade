@@ -105,7 +105,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                                                     <Image
 
                                                         src={item.image ? (item.image.startsWith('//') ? `https:${item.image}` : item.image) : item.image || '/hero-handmade.jpg'}
-                                                        alt={item.productName}
+                                                        alt='/hero-handmade.jpg'
                                                         fill
                                                         className="object-cover"
                                                     />

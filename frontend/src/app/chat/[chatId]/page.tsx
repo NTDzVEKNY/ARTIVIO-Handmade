@@ -16,6 +16,9 @@ import type {Chat, ChatMessage, Artisan, User} from '@/types';
 import type {RawChatDataResponse, RawChatMessage} from '@/types/apiTypes';
 import {mapChatDetails, mapToChatMessage} from '@/utils/chatMapper';
 import useAxiosAuth from '@/hooks/useAxiosAuth';
+import {ProductWithCategory} from "@/utils/ProductMapper";
+import {isProductOutOfStock} from "@/lib/inventory";
+import { useCart } from '@/contexts/CartContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -39,6 +42,7 @@ export default function ChatPage() {
     const axiosAuth = useAxiosAuth();
     const params = useParams();
     const router = useRouter();
+    const { buyNow } = useCart();
     const chatId = Array.isArray(params.chatId) ? Number(params.chatId[0]) : Number(params.chatId);
 
     const [chat, setChat] = useState<Chat | null>(null);
@@ -80,6 +84,8 @@ export default function ChatPage() {
                 setMessages(mappedData.messages);
                 setArtisan(mappedData.artisan);
                 setCurrentUser(mappedData.customer);
+
+                console.log( mappedData)
             } catch (error) {
                 toast.error('Có lỗi xảy ra khi tải dữ liệu');
                 console.error(error);
@@ -178,6 +184,31 @@ export default function ChatPage() {
         } finally {
             setSending(false);
         }
+    };
+
+    const handleBuyNow = (e: React.MouseEvent, product: ProductWithCategory) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log(product);
+
+        if (isProductOutOfStock(product)) {
+            toast.error('Sản phẩm đã hết hàng');
+            return;
+        }
+
+
+        buyNow({
+            id: product.id,
+            productName: product.name,
+            price: product.price,
+            image: product.image || '/artivio-logo.png',
+            stockQuantity: product.stock_quantity,
+            quantity: 1,
+            chatId: chatId
+        });
+
+        router.push('/checkout');
     };
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -389,15 +420,7 @@ export default function ChatPage() {
                                                     <div className="mt-4 pt-3 border-t border-gray-100">
                                                         <Button
                                                             className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-medium py-2 rounded-lg transition-all shadow-sm hover:shadow active:scale-95"
-                                                            onClick={() => {
-                                                                // Điều hướng đến trang thanh toán
-                                                                // Sửa đường dẫn '/checkout/...' theo routing thật của bạn
-                                                                if (proposalData?.orderId) {
-                                                                    router.push(`/checkout/${proposalData.orderId}`);
-                                                                } else {
-                                                                    toast.error("Không tìm thấy ID đơn hàng");
-                                                                }
-                                                            }}
+                                                            onClick={(e) => handleBuyNow(e, proposalData)}
                                                         >
                                                             Thanh toán ngay
                                                         </Button>

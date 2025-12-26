@@ -26,7 +26,12 @@ public class OrderItem {
     @JoinColumn(name = "product_id", nullable = true)
     @JsonIgnore
     private Product product;
+
+    @Column(name = "quantity")
     private Integer quantity;
+
+    @Column(name = "product_name")
+    private String productName;
 
     // Giá tại thời điểm mua (không đổi dù giá product sau này có đổi)
     @Column(name = "price_order")
