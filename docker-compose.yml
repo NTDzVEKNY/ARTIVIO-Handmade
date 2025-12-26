@@ -1,5 +1,5 @@
 services:
-    # 1. Database MySQL (Giữ nguyên)
+    # 1. Database MySQL
     mysql:
         image: mysql:8.0
         container_name: artivio-mysql
@@ -20,7 +20,7 @@ services:
             timeout: 5s
             retries: 5
 
-    # 2. Backend (Giữ nguyên)
+    # 2. Backend
     backend:
         build: ./backend
         container_name: artivio-backend
@@ -37,7 +37,7 @@ services:
         networks:
             - artivio-network
 
-    # 3. Frontend (Cần sửa!)
+    # 3. Frontend
     frontend:
         build: ./frontend
         container_name: artivio-frontend
