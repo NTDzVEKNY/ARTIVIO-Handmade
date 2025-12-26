@@ -357,32 +357,25 @@ export default function ChatPage() {
                             if (message.type === 'ORDER_PROPOSAL') {
                                 let proposalData = null;
                                 try {
-                                    // Giả sử content chứa JSON thông tin đơn hàng: { orderId, productName, price, image, ... }
-                                    // Nếu API trả về cấu trúc khác, hãy sửa dòng này.
                                     proposalData = JSON.parse(message.content);
                                 } catch (e) {
                                     console.error("Lỗi parse proposal data", e);
                                 }
 
                                 return (
-                                    <div key={message.id}
-                                         className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in zoom-in-95 duration-200 mb-4`}>
-                                        <div
-                                            className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[60%]`}>
-                                            <div
-                                                className="bg-white border-2 border-yellow-400 rounded-xl overflow-hidden shadow-md">
+                                    <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in zoom-in-95 duration-200 mb-4`}>
+                                        <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] md:max-w-[60%]`}>
+                                            <div className="bg-white border-2 border-yellow-400 rounded-xl overflow-hidden shadow-md">
                                                 {/* Header của thẻ đề xuất */}
-                                                <div
-                                                    className="bg-yellow-50 px-4 py-2 border-b border-yellow-200 flex items-center justify-between">
-                            <span
-                                className="text-xs font-bold text-yellow-800 uppercase tracking-wider flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none"
-                                     viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                </svg>
-                                Đề xuất đơn hàng
-                            </span>
+                                                <div className="bg-yellow-50 px-4 py-2 border-b border-yellow-200 flex items-center justify-between">
+                        <span className="text-xs font-bold text-yellow-800 uppercase tracking-wider flex items-center gap-1">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none"
+                                  viewBox="0 0 24 24" stroke="currentColor">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                             </svg>
+                             Đề xuất đơn hàng
+                        </span>
                                                 </div>
 
                                                 {/* Nội dung đơn hàng */}
@@ -390,8 +383,7 @@ export default function ChatPage() {
                                                     <div className="flex gap-4">
                                                         {/* Ảnh sản phẩm (nếu có) */}
                                                         {proposalData?.image && (
-                                                            <div
-                                                                className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
+                                                            <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
                                                                 <Image
                                                                     src={getFullImageUrl(proposalData.image)}
                                                                     alt="Product"
@@ -416,23 +408,34 @@ export default function ChatPage() {
                                                         </div>
                                                     </div>
 
-                                                    {/* Nút hành động */}
-                                                    <div className="mt-4 pt-3 border-t border-gray-100">
-                                                        <Button
-                                                            className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-medium py-2 rounded-lg transition-all shadow-sm hover:shadow active:scale-95"
-                                                            onClick={(e) => handleBuyNow(e, proposalData)}
-                                                        >
-                                                            Thanh toán ngay
-                                                        </Button>
-                                                    </div>
+                                                    {/* --- SỬA ĐỔI TẠI ĐÂY: Chỉ hiện nút khi chat chưa đóng --- */}
+                                                    {!isChatClosed && (
+                                                        <div className="mt-4 pt-3 border-t border-gray-100">
+                                                            <Button
+                                                                className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-medium py-2 rounded-lg transition-all shadow-sm hover:shadow active:scale-95"
+                                                                onClick={(e) => handleBuyNow(e, proposalData)}
+                                                            >
+                                                                Thanh toán ngay
+                                                            </Button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* (Optional) Có thể hiện thông báo thay thế nếu muốn */}
+                                                    {isChatClosed && (
+                                                        <div className="mt-4 pt-3 border-t border-gray-100 text-center text-xs text-gray-500 italic">
+                                                            Đơn hàng đã được xử lý hoặc hủy bỏ
+                                                        </div>
+                                                    )}
+                                                    {/* -------------------------------------------------------- */}
+
                                                 </div>
                                             </div>
 
                                             <span className="text-[10px] text-gray-400 mt-1 px-1">
-                        {new Date(message.created_at).toLocaleTimeString('vi-VN', {
-                            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        })}
-                    </span>
+                    {new Date(message.created_at).toLocaleTimeString('vi-VN', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    })}
+                </span>
                                         </div>
                                     </div>
                                 );

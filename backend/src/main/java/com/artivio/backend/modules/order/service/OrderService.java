@@ -74,6 +74,9 @@ public class OrderService {
                 throw new RuntimeException("Bạn không có quyền tạo đơn hàng từ cuộc hội thoại này!");
             }
 
+            chat.setStatus(Chat.ChatStatus.CLOSED);
+            chatRepository.save(chat);
+
             order.setChat(chat);
         }
 
@@ -97,11 +100,8 @@ public class OrderService {
 
             // LƯU GIÁ VÀO ORDER_ITEM (Snapshot price)
             item.setPriceOrder(priceForOrder);
-            log.info("2");
-            // Cộng dồn vào tổng tiền đơn hàng: (Giá * Số lượng)
             BigDecimal lineTotal = priceForOrder.multiply(BigDecimal.valueOf(item.getQuantity()));
             finalTotalPrice = finalTotalPrice.add(lineTotal);
-            log.info("1");
             orderItems.add(item);
         }
 

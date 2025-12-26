@@ -96,29 +96,31 @@ export const columns: ColumnDef<any>[] = [
         ),
         cell: ({ row }) => {
             const status = row.original.chat.status;
-            // Tùy chỉnh Badge để mềm mại hơn, hợp với theme Artisan
+
+            // --- CẬP NHẬT STATUS MAP ---
             const statusMap: Record<string, { label: string; className: string; style: React.CSSProperties }> = {
                 PENDING: {
                     label: "Đang chờ",
                     className: "bg-yellow-50 text-yellow-700 border-yellow-200",
                     style: {}
                 },
-                IN_PROGRESS: {
-                    label: "Đang xử lý",
+                NEGOTIATING: { // Thay thế cho IN_PROGRESS
+                    label: "Đang thương lượng",
                     className: "bg-blue-50 text-blue-700 border-blue-200",
                     style: {}
                 },
-                COMPLETED: {
-                    label: "Hoàn thành",
+                ORDER_CREATED: { // Mới thêm: Khi Artisan gửi Proposal
+                    label: "Đơn đã được tạo",
                     className: "bg-green-50 text-green-700 border-green-200",
                     style: {}
                 },
-                CLOSED: {
+                CLOSED: { // Khi Customer thanh toán xong
                     label: "Đã đóng",
                     className: "bg-gray-100 text-gray-600 border-gray-200",
                     style: {}
                 }
             };
+            // ---------------------------
 
             const config = statusMap[status] || {
                 label: status,
