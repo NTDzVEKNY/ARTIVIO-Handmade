@@ -20,7 +20,7 @@ const ProductsPage = () => {
         try {
             setIsLoading(true);
 
-            const response = await axiosAuth.get<PaginatedProductResponse>('/products?admin=true&page=0&size=1000');
+            const response = await axiosAuth.get<PaginatedProductResponse>('/products?admin=true&page=0&size=2000');
 
             const mappedProducts = response.data.content.map(mapToProduct);
             setProducts(mappedProducts);
