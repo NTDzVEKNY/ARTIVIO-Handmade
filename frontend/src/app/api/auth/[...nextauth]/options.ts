@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/app/api/_lib/mockData";
+import {axiosClient} from "@/lib/axios";
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8080/api";
 
@@ -28,27 +29,17 @@ export const authOptions: NextAuthOptions = {
                 }
 
                 try {
-                    const res = await fetch(`${API_URL}/login`, {
-                        method: "POST",
-                        body: JSON.stringify(credentials),
-                        headers: { "Content-Type": "application/json" },
-                    });
 
-                    const loginResponse = await res.json();
+                    const loginResponse = await axiosClient.post("/login", credentials);
 
-
-
-                    if (!res.ok) {
-                        throw new Error(loginResponse.error || "Đăng nhập thất bại");
-                    }
 
                     // Trả về object user
                     return {
-                        id: loginResponse.id.toString(),
-                        name: loginResponse.name,
-                        email: loginResponse.email,
-                        role: loginResponse.role,
-                        apiAccessToken: loginResponse.token,
+                        id: loginResponse.data.id.toString(),
+                        name: loginResponse.data.name,
+                        email: loginResponse.data.email,
+                        role: loginResponse.data.role,
+                        apiAccessToken: loginResponse.data.token,
                     };
                 } catch (error) {
                     console.error("Login error:", error);
