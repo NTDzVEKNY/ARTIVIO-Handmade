@@ -169,34 +169,53 @@ public class ChatService {
             String type,
             MultipartFile file
     ) {
+        // 1. Tìm Chat và User
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new RuntimeException("Chat not found"));
 
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // 2. Xác định SenderType
+        ChatMessage.SenderType currentSenderType;
+        try {
+            currentSenderType = ChatMessage.SenderType.valueOf(senderTypeStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            currentSenderType = ChatMessage.SenderType.CUSTOMER;
+        }
+
+        // 3. Xác định MessageType và Xử lý File (Cần làm bước này trước để biết type thật sự)
         String finalContent = content;
         ChatMessage.EnumMessageType finalType = ChatMessage.EnumMessageType.valueOf(type.toUpperCase());
         boolean finalIsImage = isImage;
 
-
-        // Tái sử dụng hàm lưu file
         if (file != null && !file.isEmpty()) {
             finalContent = saveFileToSystem(file);
             finalIsImage = true;
             finalType = ChatMessage.EnumMessageType.IMAGE;
         }
 
+        // 4. --- LOGIC CẬP NHẬT TRẠNG THÁI CHAT ---
+        if (currentSenderType == ChatMessage.SenderType.ARTISAN) {
+
+            // Ưu tiên 1: Nếu là Order Proposal -> Chuyển sang ORDER_CREATED ngay
+            if (finalType == ChatMessage.EnumMessageType.ORDER_PROPOSAL) {
+                chat.setStatus(Chat.ChatStatus.ORDER_CREATED);
+                chatRepository.save(chat);
+            }
+            // Ưu tiên 2: Nếu là tin nhắn thường/ảnh VÀ Chat đang PENDING -> Chuyển sang NEGOTIATING
+            else if (chat.getStatus() == Chat.ChatStatus.PENDING) {
+                chat.setStatus(Chat.ChatStatus.NEGOTIATING);
+                chatRepository.save(chat);
+            }
+        }
+        // -------------------------------------------------------
+
+        // 5. Tạo và lưu Message
         ChatMessage message = new ChatMessage();
         message.setChat(chat);
         message.setSender(sender);
-
-        try {
-            message.setSenderType(ChatMessage.SenderType.valueOf(senderTypeStr.toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            message.setSenderType(ChatMessage.SenderType.CUSTOMER);
-        }
-
+        message.setSenderType(currentSenderType);
         message.setMessage(finalContent);
         message.setImage(finalIsImage);
         message.setType(finalType);
