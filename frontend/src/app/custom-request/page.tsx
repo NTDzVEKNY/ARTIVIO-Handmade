@@ -25,11 +25,11 @@ export default function MyChatsPage() {
             },
             ORDER_CREATED: {
                 label: "Đơn hàng đã được tạo",
-                className: "bg-green-100 text-green-800 border-green-200"
+                className: "bg-blue-50 text-blue-700 border-blue-200"
             },
             CLOSED: {
-                label: "Đã đóng",
-                className: "bg-gray-100 text-gray-800 border-gray-200"
+                label: "Đã hoàn thành",
+                className: "bg-green-50 text-green-700 border-green-200"
             },
         };
         const config = statusMap[status] || { label: status, className: "bg-gray-100 text-gray-800" };
