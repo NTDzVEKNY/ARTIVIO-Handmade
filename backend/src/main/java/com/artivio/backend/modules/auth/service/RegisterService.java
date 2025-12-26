@@ -10,6 +10,8 @@ import com.artivio.backend.modules.auth.dto.request.RegisterRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.Random;
 
@@ -21,6 +23,7 @@ public class RegisterService {
     private final EmailService emailService;
     private final OtpRepository otpRepository;
 
+    @Transactional
     public String register(RegisterRequest req) {
 
         // Check email duplicate
@@ -31,16 +34,21 @@ public class RegisterService {
             throw new RuntimeException("Password và Confirm Password phải giống nhau");
         }
 
-        Otp otp = new Otp();
-        otp.setName(req.getName());
-        otp.setEmail(req.getEmail());
-        otp.setPassword(passwordEncoder.encode(req.getPassword()));
-        otp.setCode(String.valueOf(new Random().nextInt(900000) + 100000));
-        otp.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(5));
+        Otp otp = otpRepository.findByEmail(req.getEmail()).orElse(null);
+        if (otp != null) {
+            otpRepository.delete(otp);
+        }
 
-        otpRepository.save(otp);
+        Otp newOtp = new Otp();
+        newOtp.setName(req.getName());
+        newOtp.setEmail(req.getEmail());
+        newOtp.setPassword(passwordEncoder.encode(req.getPassword()));
+        newOtp.setCode(String.valueOf(new Random().nextInt(900000) + 100000));
+        newOtp.setExpiresAt(java.time.LocalDateTime.now().plusMinutes(5));
 
-        emailService.sendOtpEmail(req.getEmail(), otp.getCode());
+        otpRepository.save(newOtp);
+
+        emailService.sendOtpEmail(req.getEmail(), newOtp.getCode());
 
         return "OTP đã được gửi đến email của bạn.";
     }

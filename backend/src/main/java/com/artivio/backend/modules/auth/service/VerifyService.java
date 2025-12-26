@@ -8,6 +8,7 @@ import com.artivio.backend.modules.auth.repository.OtpRepository;
 import com.artivio.backend.modules.auth.repository.UserRepository;
 import com.artivio.backend.utils.EmailService.EmailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.Random;
@@ -19,6 +20,7 @@ public class VerifyService {
     private final UserRepository userRepository;
     private final EmailService emailService;
 
+    @Transactional
     public String verifyAccount(VerifyAccountRequest request) {
         Otp otp = otpRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Mail chưa được đăng ký!"));
@@ -37,7 +39,6 @@ public class VerifyService {
             throw new RuntimeException("Mã xác thực không hợp lệ!");
         }
 
-        otpRepository.delete(otp);
         emailService.sendSuccessVerificationEmail(otp.getEmail());
 
         User user = new User();
@@ -47,6 +48,7 @@ public class VerifyService {
         user.setRole(Role.USER);
 
         userRepository.save(user);
+        otpRepository.delete(otp);
 
         return "Xác thực thành công! Tài khoản của bạn đã được tạo.";
     }

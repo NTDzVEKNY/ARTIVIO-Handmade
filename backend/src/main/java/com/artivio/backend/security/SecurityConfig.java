@@ -34,7 +34,8 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults()) // Enable CORS based on the Bean below
                 .authorizeHttpRequests(auth -> auth
                         // === PUBLIC ENDPOINTS ===
-                        .requestMatchers("/api/login", "/api/register" , "/api/verifyAccount").permitAll()
+                        .requestMatchers("/api/login", "/api/register", "/api/verifyAccount", "/api/forgot-password",
+                                "/api/reset-password").permitAll()
 
                         // Public GET resources
                         .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/category/**").permitAll()
