@@ -101,7 +101,7 @@ export const columns: ColumnDef<any>[] = [
             const statusMap: Record<string, { label: string; className: string; style: React.CSSProperties }> = {
                 PENDING: {
                     label: "Đang chờ",
-                    className: "bg-yellow-50 text-yellow-700 border-yellow-200",
+                    className: "bg-gray-100 text-gray-600 border-gray-200",
                     style: {}
                 },
                 NEGOTIATING: { // Thay thế cho IN_PROGRESS

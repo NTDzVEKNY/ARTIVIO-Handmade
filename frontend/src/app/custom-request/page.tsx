@@ -17,7 +17,7 @@ export default function MyChatsPage() {
         const statusMap: Record<string, { label: string; className: string }> = {
             PENDING: {
                 label: "Đang chờ",
-                className: "bg-yellow-100 text-yellow-800 border-yellow-200"
+                className: "bg-gray-100 text-gray-800 border-gray-200"
             },
             NEGOTIATING: {
                 label: "Đang thương lượng",
