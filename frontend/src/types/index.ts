@@ -29,6 +29,7 @@ export type CartItem = {
   image?: string;
   quantity: number;
   stockQuantity?: number;
+  chatId?: number;
 };
 
 export type ShippingAddress = {

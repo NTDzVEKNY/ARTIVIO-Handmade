@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.artivio.backend.modules.order.dto.OrderProgressResponseDTO;
 import com.artivio.backend.modules.order.dto.OrderDetailDTO;
 import com.artivio.backend.modules.order.dto.AdminOrderListDTO;
+import lombok.extern.slf4j.Slf4j;
+
 
 
 import java.math.BigDecimal;
@@ -27,6 +29,7 @@ import java.util.Collections;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class OrderService {
 
     @Autowired
@@ -81,21 +84,24 @@ public class OrderService {
         for (OrderItemRequestDTO itemDto : orderRequest.getItems()) {
             Product product = this.decreaseStock(itemDto.getProductId(), itemDto.getQuantity());
 
+
             OrderItem item = new OrderItem();
             item.setProduct(product);
             item.setQuantity(itemDto.getQuantity());
             item.setOrder(order);
+            item.setProductName(product.getProductName());
+
 
             Double currentProductPrice = product.getPrice();
             BigDecimal priceForOrder = BigDecimal.valueOf(currentProductPrice);
 
             // LƯU GIÁ VÀO ORDER_ITEM (Snapshot price)
             item.setPriceOrder(priceForOrder);
-
+            log.info("2");
             // Cộng dồn vào tổng tiền đơn hàng: (Giá * Số lượng)
             BigDecimal lineTotal = priceForOrder.multiply(BigDecimal.valueOf(item.getQuantity()));
             finalTotalPrice = finalTotalPrice.add(lineTotal);
-
+            log.info("1");
             orderItems.add(item);
         }
 

@@ -28,9 +28,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
@@ -163,6 +166,7 @@ public class ChatService {
             String senderTypeStr,
             String content,
             Boolean isImage,
+            String type,
             MultipartFile file
     ) {
         Chat chat = chatRepository.findById(chatId)
@@ -172,7 +176,7 @@ public class ChatService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String finalContent = content;
-        ChatMessage.EnumMessageType finalType = ChatMessage.EnumMessageType.TEXT;
+        ChatMessage.EnumMessageType finalType = ChatMessage.EnumMessageType.valueOf(type.toUpperCase());
         boolean finalIsImage = isImage;
 
 

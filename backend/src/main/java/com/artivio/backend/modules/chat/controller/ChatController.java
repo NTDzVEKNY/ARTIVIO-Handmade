@@ -64,12 +64,13 @@ public class ChatController {
             @RequestParam("senderType") String senderType,
             @RequestParam(value = "content", required = false, defaultValue = "") String content,
             @RequestParam(value = "isImage", defaultValue = "false") Boolean isImage,
+            @RequestParam(value = "type", defaultValue = "TEXT") String type,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         try {
             ChatMessageResponse savedMessage = chatService.processAndSaveMessage(
-                    chatId, senderId, senderType, content, isImage, file
+                    chatId, senderId, senderType, content, isImage, type, file
             );
             String topic = "/topic/chat/" + chatId;
             messagingTemplate.convertAndSend(topic, savedMessage);

@@ -18,7 +18,8 @@ import {
     Mail,
     FileText,
     DollarSign,
-    Calendar
+    Calendar,
+    Check
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,11 @@ export default function AdminChatDetailPage() {
 
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+    // --- STATE FOR PROPOSAL MODAL ---
+    const [isProposalOpen, setIsProposalOpen] = useState(false);
+    const [proposalPrice, setProposalPrice] = useState<string>('');
+    const [proposalNote, setProposalNote] = useState('');
 
     // --- REFS ---
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -148,6 +154,53 @@ export default function AdminChatDetailPage() {
     }, [chatId, session?.user?.apiAccessToken]);
 
     // --- HANDLERS ---
+    const handleSendProposal = async () => {
+        if (!proposalPrice || isNaN(Number(proposalPrice))) {
+            toast.error("Vui lòng nhập giá hợp lệ");
+            return;
+        }
+
+        setIsSending(true);
+        try {
+            // Create JSON content for the proposal
+            const proposalData = JSON.stringify({
+                price: Number(proposalPrice),
+                title: chat?.title || "Đơn hàng tùy chỉnh",
+                description: proposalNote || chat?.description || ""
+            });
+
+            const customProduct = await axiosAuth.post('/products', {
+                productName: chat?.title || "Đơn hàng tùy chỉnh",
+                price : Number(proposalPrice),
+                description: proposalNote || chat?.description || "",
+                status : "HIDDEN",
+                stockQuantity : 20,
+                categoryId : 99999999,
+                image: chat?.reference_image || null
+            });
+
+            const formData = new FormData();
+            formData.append('chatId', chatId.toString());
+            formData.append('senderId', '1'); // Or get from session
+            formData.append('senderType', 'ARTISAN');
+            formData.append('content', JSON.stringify(customProduct.data)); // Send JSON string
+            formData.append('isImage', 'false');
+            formData.append('type', 'ORDER_PROPOSAL'); // <--- IMPORTANT: Send type
+
+            await axiosAuth.post('/chat/sendMessage', formData);
+
+            toast.success("Đã gửi đề xuất đơn hàng!");
+            setIsProposalOpen(false);
+            setProposalPrice('');
+            setProposalNote('');
+        } catch (error) {
+            toast.error('Gửi đề xuất thất bại');
+            console.error(error);
+        } finally {
+            setIsSending(false);
+        }
+    };
+
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -335,6 +388,67 @@ export default function AdminChatDetailPage() {
                                                                 onClick={() => window.open(getFullImageUrl(message.content), '_blank')}
                                                             />
                                                         </div>
+                                                    ) : message.type === 'ORDER_PROPOSAL' ? (
+                                                        (() => {
+                                                            // --- HÀM XỬ LÝ AN TOÀN ---
+                                                            const safeParseJSON = (str) => {
+                                                                if (typeof str === 'object' && str !== null) return str; // Nếu đã là object thì trả về luôn
+                                                                if (!str) return {};
+
+                                                                let cleaned = str.trim();
+                                                                // 1. Thêm ngoặc nhọn nếu thiếu
+                                                                if (!cleaned.startsWith('{')) cleaned = `{${cleaned}}`;
+
+                                                                try {
+                                                                    // Thử parse chuẩn trước
+                                                                    return JSON.parse(cleaned);
+                                                                } catch (e1) {
+                                                                    try {
+                                                                        // 2. Nếu lỗi, thử "sửa" lỗi thiếu ngoặc kép ở Key (ví dụ: id:123 -> "id":123)
+                                                                        // Regex này tìm các key chưa có ngoặc kép và thêm vào
+                                                                        const fixedJSON = cleaned.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":');
+                                                                        return JSON.parse(fixedJSON);
+                                                                    } catch (e2) {
+                                                                        console.error("Vẫn lỗi parse:", e2, "Chuỗi gốc:", str);
+                                                                        return null;
+                                                                    }
+                                                                }
+                                                            };
+
+                                                            const productData = safeParseJSON(message.content);
+
+                                                            // Nếu không parse được hoặc dữ liệu rỗng
+                                                            if (!productData) {
+                                                                return <div className="text-red-500 text-xs p-2 border border-red-200 bg-red-50 rounded">Lỗi dữ liệu đơn hàng</div>;
+                                                            }
+
+                                                            return (
+                                                                <div className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm max-w-sm my-1">
+                                                                    <div className="flex items-center gap-2 mb-3 border-b border-gray-100 pb-2">
+                                                                        <span className="text-blue-500 text-lg">🛍️</span>
+                                                                        <span className="font-semibold text-sm text-gray-700 uppercase">Đơn đề xuất</span>
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <h3 className="font-bold text-gray-800 text-base leading-tight">
+                                                                            {productData.productName || 'Sản phẩm'}
+                                                                        </h3>
+                                                                        <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                            {productData.categoryName || 'Khác'}
+                        </span>
+                                                                            <span className="font-bold text-blue-600 text-lg">
+                            {productData.price ? Number(productData.price).toLocaleString('vi-VN') : 0} đ
+                        </span>
+                                                                        </div>
+                                                                        {productData.description && (
+                                                                            <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded mt-2 italic">
+                                                                                "{productData.description}"
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()
                                                     ) : (
                                                         <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                                                     )}
@@ -484,6 +598,11 @@ export default function AdminChatDetailPage() {
                         <div className="mt-4 pt-4 border-t border-[#E8D5B5]">
                             <Button
                                 variant="outline"
+                                onClick={() => {
+                                    // Pre-fill price from budget if available
+                                    if (chat?.budget) setProposalPrice(chat.budget.toString());
+                                    setIsProposalOpen(true);
+                                }}
                                 className="w-full justify-start border-[#E8D5B5] text-[#3F2E23] hover:bg-[#FFF8F0]"
                             >
                                 <span className="mr-2">📄</span> Tạo đơn hàng từ Chat
@@ -491,7 +610,68 @@ export default function AdminChatDetailPage() {
                         </div>
                     </div>
                 </div>
+                {/* --- MODAL POPUP (ADD THIS AT THE END OF RETURN) --- */}
+                {isProposalOpen && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-md border border-[#E8D5B5] animate-in fade-in zoom-in-95 duration-200">
 
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between p-4 border-b border-[#E8D5B5]">
+                                <h3 className="font-bold text-[#3F2E23]">Tạo Đề Xuất Đơn Hàng</h3>
+                                <button onClick={() => setIsProposalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="p-4 space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-[#6B4F3E]">Giá chốt (VNĐ)</label>
+                                    <Input
+                                        type="number"
+                                        value={proposalPrice}
+                                        onChange={(e) => setProposalPrice(e.target.value)}
+                                        placeholder="Ví dụ: 500000"
+                                        className="border-[#E8D5B5] focus-visible:ring-[#3F2E23]"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-[#6B4F3E]">Ghi chú (Tên SP/Chi tiết)</label>
+                                    <Input
+                                        value={proposalNote}
+                                        onChange={(e) => setProposalNote(e.target.value)}
+                                        placeholder="VD: Lọ hoa gốm xanh custom..."
+                                        className="border-[#E8D5B5] focus-visible:ring-[#3F2E23]"
+                                    />
+                                </div>
+
+                                <div className="bg-[#FFF8F0] p-3 rounded-lg text-xs text-[#6B4F3E]">
+                                    <p>ℹ️ Khách hàng sẽ nhận được tin nhắn xác nhận. Đơn hàng chỉ được tạo chính thức khi khách hàng nhấn nút <b>"Đồng ý & Thanh toán"</b>.</p>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-4 border-t border-[#E8D5B5] flex justify-end gap-3">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setIsProposalOpen(false)}
+                                    disabled={isSending}
+                                >
+                                    Hủy
+                                </Button>
+                                <Button
+                                    onClick={handleSendProposal}
+                                    disabled={isSending}
+                                    className="bg-[#3F2E23] hover:bg-[#2A1E17] text-white"
+                                >
+                                    {isSending ? <Loader2 className="animate-spin h-4 w-4" /> : <Check className="w-4 h-4 mr-2" />}
+                                    Gửi đề xuất
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
