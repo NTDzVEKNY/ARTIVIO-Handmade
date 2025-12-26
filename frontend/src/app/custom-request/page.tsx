@@ -21,7 +21,7 @@ export default function MyChatsPage() {
             },
             NEGOTIATING: {
                 label: "Đang thương lượng",
-                className: "bg-blue-100 text-blue-800 border-blue-200"
+                className: "bg-orange-100 text-orange-800 border-orange-200"
             },
             ORDER_CREATED: {
                 label: "Đơn hàng đã được tạo",

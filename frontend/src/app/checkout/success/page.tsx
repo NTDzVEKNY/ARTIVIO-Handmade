@@ -1,28 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
 import type { StoredOrder } from '@/lib/ordersStorage';
-import { RawOrderDetail } from '@/types/apiTypes'; // Đảm bảo bạn đã define type này
-import useAxiosAuth from "@/hooks/useAxiosAuth"; // Import hook axios
+import { RawOrderDetail } from '@/types/apiTypes';
+import useAxiosAuth from "@/hooks/useAxiosAuth";
 
-export default function CheckoutSuccessPage() {
+// Component hiển thị loading (Fallback)
+function LoadingState() {
+    return (
+        <div className="min-h-screen font-sans text-gray-800 bg-white">
+            <Header />
+            <main className="container mx-auto px-6 py-12">
+                <div className="max-w-2xl mx-auto text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0f172a] mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Đang tải thông tin đơn hàng...</p>
+                </div>
+            </main>
+            <Footer />
+        </div>
+    );
+}
+
+// Component chứa logic chính sử dụng useSearchParams
+function CheckoutSuccessContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const axiosAuth = useAxiosAuth(); // Khởi tạo hook
+    const axiosAuth = useAxiosAuth();
 
     const orderId = searchParams.get('orderId');
-    // const orderNumber = searchParams.get('orderNumber'); // Có thể không cần nếu lấy từ API response
-
     const [order, setOrder] = useState<StoredOrder | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Nếu không có orderId trên URL, đá về trang giỏ hàng
         if (!orderId) {
             router.push('/cart');
             return;
@@ -30,56 +44,39 @@ export default function CheckoutSuccessPage() {
 
         const fetchOrder = async () => {
             try {
-                // 1. Gọi API bằng axiosAuth
-                // Endpoint: GET /api/orders/{id}
                 const response = await axiosAuth.get<RawOrderDetail>(`/orders/${orderId}`);
-                const orderData = response.data; // Axios trả data trong field .data
+                const orderData = response.data;
 
-                // 2. Helper map trạng thái từ Backend -> Frontend
                 const mapBackendStatusToFrontend = (backendStatus: string): StoredOrder['status'] => {
                     switch (backendStatus) {
-                        case 'PENDING':
-                            return 'pending';
-                        case 'IN_PROGRESS':
-                            return 'processing';
-                        case 'SHIPPED':
-                            return 'shipped';
-                        case 'COMPLETED':
-                            return 'delivered';
-                        case 'CANCELLED':
-                            return 'cancelled';
-                        default:
-                            return 'pending';
+                        case 'PENDING': return 'pending';
+                        case 'IN_PROGRESS': return 'processing';
+                        case 'SHIPPED': return 'shipped';
+                        case 'COMPLETED': return 'delivered';
+                        case 'CANCELLED': return 'cancelled';
+                        default: return 'pending';
                     }
                 };
 
-                // 3. Helper map phương thức thanh toán
                 const mapBackendPaymentMethodToFrontend = (backendMethod: string): StoredOrder['paymentMethod'] => {
                     switch (backendMethod) {
-                        case 'COD':
-                            return 'cod';
+                        case 'COD': return 'cod';
                         case 'ONLINE':
-                        case 'BANK_TRANSFER': // Trường hợp backend trả về cụ thể
-                            return 'bank_transfer';
-                        case 'CREDIT_CARD':
-                            return 'credit_card';
-                        default:
-                            return 'bank_transfer'; // Default fallback
+                        case 'BANK_TRANSFER': return 'bank_transfer';
+                        case 'CREDIT_CARD': return 'credit_card';
+                        default: return 'bank_transfer';
                     }
                 };
 
-                // 4. Tính toán subtotal (nếu backend không trả về sẵn)
-                // Lưu ý: Backend thường nên trả về subtotal, nhưng nếu không có thì tính ở đây
                 const subtotal = orderData.items.reduce((sum, item) => sum + Number(item.subtotal || (item.price * item.quantity)), 0);
 
-                // 5. Map dữ liệu vào state Frontend
                 const mappedOrder: StoredOrder = {
                     id: orderData.id,
-                    orderNumber: `ART-${orderData.id}`, // Hoặc orderData.orderNumber nếu backend có field này
+                    orderNumber: `ART-${orderData.id}`,
                     customerName: orderData.customerName,
                     phone: orderData.customerPhone,
                     status: mapBackendStatusToFrontend(orderData.status),
-                    createdAt: orderData.orderDate, // Đảm bảo format date string tương thích
+                    createdAt: orderData.orderDate,
                     subtotal: Number(subtotal),
                     shippingFee: Number(orderData.shippingFee || 0),
                     total: Number(orderData.totalPrice),
@@ -87,7 +84,7 @@ export default function CheckoutSuccessPage() {
                     shippingAddress: {
                         fullName: orderData.customerName,
                         phone: orderData.customerPhone,
-                        email: '', // Backend OrderDetailDTO hiện tại chưa có email, có thể để trống hoặc lấy từ User Context nếu cần
+                        email: '',
                         address: orderData.shippingAddress,
                         note: orderData.note || undefined,
                     },
@@ -103,29 +100,16 @@ export default function CheckoutSuccessPage() {
                 setOrder(mappedOrder);
             } catch (error: any) {
                 console.error('Error fetching order:', error);
-                // Nếu lỗi 403/401 -> Token hết hạn hoặc không có quyền xem
-                // Nếu lỗi 404 -> Không tìm thấy đơn
             } finally {
                 setLoading(false);
             }
         };
 
         fetchOrder();
-    }, [orderId, router, axiosAuth]); // Thêm axiosAuth vào dependency array
+    }, [orderId, router, axiosAuth]);
 
     if (loading) {
-        return (
-            <div className="min-h-screen font-sans text-gray-800 bg-white">
-                <Header />
-                <main className="container mx-auto px-6 py-12">
-                    <div className="max-w-2xl mx-auto text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0f172a] mx-auto"></div>
-                        <p className="mt-4 text-gray-600">Đang tải thông tin đơn hàng...</p>
-                    </div>
-                </main>
-                <Footer />
-            </div>
-        );
+        return <LoadingState />;
     }
 
     if (!order) {
@@ -152,40 +136,28 @@ export default function CheckoutSuccessPage() {
 
     const getPaymentMethodName = (method: string) => {
         switch (method) {
-            case 'cod':
-                return 'Thanh toán khi nhận hàng (COD)';
-            case 'bank_transfer':
-                return 'Chuyển khoản ngân hàng';
-            case 'credit_card':
-                return 'Thẻ tín dụng/Ghi nợ';
-            default:
-                return method;
+            case 'cod': return 'Thanh toán khi nhận hàng (COD)';
+            case 'bank_transfer': return 'Chuyển khoản ngân hàng';
+            case 'credit_card': return 'Thẻ tín dụng/Ghi nợ';
+            default: return method;
         }
     };
 
     const getStatusName = (status: string) => {
         switch (status) {
-            case 'pending':
-                return 'Đang chờ xử lý';
-            case 'confirmed':
-                return 'Đã xác nhận';
-            case 'processing':
-                return 'Đang xử lý';
-            case 'shipped':
-                return 'Đang giao hàng';
-            case 'delivered':
-                return 'Đã nhận hàng';
-            case 'cancelled':
-                return 'Đã hủy';
-            default:
-                return status;
+            case 'pending': return 'Đang chờ xử lý';
+            case 'confirmed': return 'Đã xác nhận';
+            case 'processing': return 'Đang xử lý';
+            case 'shipped': return 'Đang giao hàng';
+            case 'delivered': return 'Đã nhận hàng';
+            case 'cancelled': return 'Đã hủy';
+            default: return status;
         }
     };
 
     return (
         <div className="min-h-screen font-sans text-gray-800 bg-white">
             <Header />
-
             <main className="container mx-auto px-6 py-12">
                 <div className="max-w-3xl mx-auto">
                     {/* Success Message */}
@@ -203,7 +175,6 @@ export default function CheckoutSuccessPage() {
                     {/* Order Details */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                         <h2 className="text-xl font-bold text-gray-900 mb-6">Chi tiết đơn hàng</h2>
-
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -214,11 +185,7 @@ export default function CheckoutSuccessPage() {
                                     <p className="text-sm text-gray-600">Ngày đặt hàng</p>
                                     <p className="font-semibold text-gray-900">
                                         {new Date(order.createdAt).toLocaleDateString('vi-VN', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit',
+                                            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
                                         })}
                                     </p>
                                 </div>
@@ -241,9 +208,7 @@ export default function CheckoutSuccessPage() {
                             <p className="font-semibold mb-2">{order.shippingAddress.fullName}</p>
                             <p className="text-sm mb-1">📞 {order.shippingAddress.phone}</p>
                             {order.shippingAddress.email && <p className="text-sm mb-1">✉️ {order.shippingAddress.email}</p>}
-                            <p className="text-sm">
-                                📍 {order.shippingAddress.address}
-                            </p>
+                            <p className="text-sm">📍 {order.shippingAddress.address}</p>
                             {order.shippingAddress.note && (
                                 <p className="text-sm mt-2 text-gray-600">
                                     <span className="font-medium">Ghi chú:</span> {order.shippingAddress.note}
@@ -276,8 +241,7 @@ export default function CheckoutSuccessPage() {
                                 </div>
                             ))}
                         </div>
-
-                        {/* Order Summary */}
+                        {/* Summary */}
                         <div className="mt-6 pt-6 border-t space-y-3">
                             <div className="flex justify-between text-gray-600">
                                 <span>Tạm tính:</span>
@@ -286,12 +250,8 @@ export default function CheckoutSuccessPage() {
                             <div className="flex justify-between text-gray-600">
                                 <span>Phí vận chuyển:</span>
                                 <span className="font-medium">
-                  {order.shippingFee === 0 ? (
-                      <span className="text-green-600">Miễn phí</span>
-                  ) : (
-                      `₫${order.shippingFee.toLocaleString('vi-VN')}`
-                  )}
-                </span>
+                                    {order.shippingFee === 0 ? <span className="text-green-600">Miễn phí</span> : `₫${order.shippingFee.toLocaleString('vi-VN')}`}
+                                </span>
                             </div>
                             <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t">
                                 <span>Tổng cộng:</span>
@@ -300,7 +260,7 @@ export default function CheckoutSuccessPage() {
                         </div>
                     </div>
 
-                    {/* Payment Instructions for Bank Transfer */}
+                    {/* Payment Instructions */}
                     {order.paymentMethod === 'bank_transfer' && (
                         <div className="bg-blue-50 rounded-xl border border-blue-200 p-6 mb-6">
                             <h3 className="font-bold text-blue-900 mb-4">Hướng dẫn thanh toán</h3>
@@ -317,7 +277,7 @@ export default function CheckoutSuccessPage() {
                         </div>
                     )}
 
-                    {/* Next Steps */}
+                    {/* Next Steps & Actions */}
                     <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 mb-6">
                         <h3 className="font-bold text-gray-900 mb-4">Bước tiếp theo</h3>
                         <ul className="space-y-2 text-sm text-gray-700">
@@ -328,25 +288,26 @@ export default function CheckoutSuccessPage() {
                         </ul>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <Link
-                            href="/shop/products"
-                            className="flex-1 bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center"
-                        >
+                        <Link href="/shop/products" className="flex-1 bg-[#0f172a] text-white px-6 py-3 rounded-full font-semibold shadow hover:bg-gray-800 transition-all duration-300 text-center">
                             Tiếp tục mua sắm
                         </Link>
-                        <Link
-                            href="/"
-                            className="flex-1 border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-full font-semibold hover:border-gray-400 transition-all duration-300 text-center"
-                        >
+                        <Link href="/" className="flex-1 border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-full font-semibold hover:border-gray-400 transition-all duration-300 text-center">
                             Về trang chủ
                         </Link>
                     </div>
                 </div>
             </main>
-
             <Footer />
         </div>
+    );
+}
+
+// Default Export: Bọc Content trong Suspense
+export default function CheckoutSuccessPage() {
+    return (
+        <Suspense fallback={<LoadingState />}>
+            <CheckoutSuccessContent />
+        </Suspense>
     );
 }

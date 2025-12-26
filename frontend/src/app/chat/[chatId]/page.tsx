@@ -20,7 +20,7 @@ import {ProductWithCategory} from "@/utils/ProductMapper";
 import {isProductOutOfStock} from "@/lib/inventory";
 import { useCart } from '@/contexts/CartContext';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 // Helper function để lấy full URL
 const getFullImageUrl = (path: string | null | undefined) => {
