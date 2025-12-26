@@ -192,7 +192,7 @@ const ProductFormPage = () => {
                 const updatedProductData = response.data;
                 const updatedProduct: Partial<ProductFormData> = updatedProductData ? {
                     id: updatedProductData.id,
-                    productName: updatedProductData.name,
+                    productName: updatedProductData.productName,
                     description: updatedProductData.description,
                     price: updatedProductData.price,
                     image: updatedProductData.image,
